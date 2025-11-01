@@ -1,0 +1,420 @@
+{
+  "instructions": "\n# Jac Language LLM Benchmark - Test Instructions\n\nYou are being tested on your ability to write Jac code based on documentation.\nFor each test case, write ONLY the Jac code that solves the task.\n\n## Important Rules:\n1. Write complete, syntactically correct Jac code\n2. Follow all Jac syntax conventions (semicolons, braces, type annotations)\n3. Do NOT include explanations or markdown - ONLY code\n4. Each response should be valid Jac code that could run\n5. Pay attention to required elements mentioned in hints\n\n## Response Format:\nYour response file should be a JSON object where:\n- Keys are test IDs (e.g., \"basic_01\", \"walker_03\")\n- Values are the Jac code as strings\n\nExample format:\n{\n    \"basic_01\": \"with entry {\\n    print(\\\"Hello, Jac!\\\");\\n}\",\n    \"basic_02\": \"glob counter: int = 0;\\n\\nwith entry {\\n    print(:g:counter);\\n}\"\n}\n\n## Test Cases:\n",
+  "tests": [
+    {
+      "id": "basic_01",
+      "level": 1,
+      "category": "Basic Syntax",
+      "task": "Create a simple Jac program with an entry point that prints 'Hello, Jac!'",
+      "points": 5,
+      "hints": [
+        "Entry point syntax",
+        "Statement termination"
+      ]
+    },
+    {
+      "id": "basic_02",
+      "level": 1,
+      "category": "Basic Syntax",
+      "task": "Declare a global variable named 'counter' of type int with value 0, then print it",
+      "points": 5,
+      "hints": [
+        "Global variable declaration",
+        "Global access syntax"
+      ]
+    },
+    {
+      "id": "basic_03",
+      "level": 1,
+      "category": "Basic Syntax",
+      "task": "Create an enum called Status with values PENDING, ACTIVE, COMPLETED",
+      "points": 5,
+      "hints": [
+        "Enum syntax"
+      ]
+    },
+    {
+      "id": "basic_04",
+      "level": 1,
+      "category": "Basic Syntax",
+      "task": "Write a function named 'add_numbers' that takes two int parameters and returns their sum",
+      "points": 5,
+      "hints": [
+        "Function definition",
+        "Type annotations",
+        "Return type"
+      ]
+    },
+    {
+      "id": "basic_05",
+      "level": 1,
+      "category": "Basic Syntax",
+      "task": "Create a for loop that iterates from 1 to 5 and prints each number",
+      "points": 5,
+      "hints": [
+        "Jac for loop syntax with 'to' and 'by'"
+      ]
+    },
+    {
+      "id": "obj_01",
+      "level": 2,
+      "category": "Objects",
+      "task": "Create an object class named 'Person' with attributes name (str) and age (int)",
+      "points": 10,
+      "hints": [
+        "Object declaration",
+        "Attribute declaration with 'has'"
+      ]
+    },
+    {
+      "id": "obj_02",
+      "level": 2,
+      "category": "Objects",
+      "task": "Create an object 'Car' with attributes brand (str), year (int), and a method 'get_info' that returns a formatted string",
+      "points": 10,
+      "hints": [
+        "Object with methods",
+        "self reference"
+      ]
+    },
+    {
+      "id": "obj_03",
+      "level": 2,
+      "category": "Objects",
+      "task": "Create an object 'Student' that inherits from 'Person' and adds a 'grade' attribute",
+      "points": 10,
+      "hints": [
+        "Inheritance syntax"
+      ]
+    },
+    {
+      "id": "obj_04",
+      "level": 2,
+      "category": "Objects",
+      "task": "Create an object with a postinit method that prints 'Object initialized'",
+      "points": 10,
+      "hints": [
+        "Postinit lifecycle method"
+      ]
+    },
+    {
+      "id": "obj_05",
+      "level": 2,
+      "category": "Objects",
+      "task": "Create a lambda function that takes a number and returns its square",
+      "points": 10,
+      "hints": [
+        "Lambda syntax with type annotations"
+      ]
+    },
+    {
+      "id": "graph_01",
+      "level": 3,
+      "category": "Graph Basics",
+      "task": "Create a node named 'City' with attributes name (str) and population (int)",
+      "points": 15,
+      "hints": [
+        "Node declaration syntax"
+      ]
+    },
+    {
+      "id": "graph_02",
+      "level": 3,
+      "category": "Graph Basics",
+      "task": "Create two City nodes and connect them with a bidirectional edge",
+      "points": 15,
+      "hints": [
+        "Node instantiation",
+        "Bidirectional connection operator"
+      ]
+    },
+    {
+      "id": "graph_03",
+      "level": 3,
+      "category": "Graph Basics",
+      "task": "Create a custom edge named 'Road' with attribute distance (float), then connect two cities with it",
+      "points": 15,
+      "hints": [
+        "Edge declaration",
+        "Typed edge connection"
+      ]
+    },
+    {
+      "id": "graph_04",
+      "level": 3,
+      "category": "Graph Basics",
+      "task": "Create a node with an ability that executes on entry",
+      "points": 15,
+      "hints": [
+        "Node abilities",
+        "Entry trigger"
+      ]
+    },
+    {
+      "id": "graph_05",
+      "level": 3,
+      "category": "Graph Basics",
+      "task": "Create a node that references 'visitor' in its ability to access the visiting walker",
+      "points": 15,
+      "hints": [
+        "Node ability context",
+        "Visitor reference"
+      ]
+    },
+    {
+      "id": "walker_01",
+      "level": 4,
+      "category": "Walkers",
+      "task": "Create a walker named 'Explorer' with an attribute visited_count (int) initialized to 0",
+      "points": 20,
+      "hints": [
+        "Walker declaration",
+        "Attribute initialization"
+      ]
+    },
+    {
+      "id": "walker_02",
+      "level": 4,
+      "category": "Walkers",
+      "task": "Create a walker that visits all outgoing nodes using visit [-->]",
+      "points": 20,
+      "hints": [
+        "Walker visit syntax",
+        "Outgoing edge pattern"
+      ]
+    },
+    {
+      "id": "walker_03",
+      "level": 4,
+      "category": "Walkers",
+      "task": "Create a walker that visits nodes filtered by type, using the ?Type syntax",
+      "points": 20,
+      "hints": [
+        "Type filtering in visit",
+        "Backtick question mark syntax"
+      ]
+    },
+    {
+      "id": "walker_04",
+      "level": 4,
+      "category": "Walkers",
+      "task": "Create a walker with an entry ability that prints the current node using 'here'",
+      "points": 20,
+      "hints": [
+        "Walker abilities",
+        "Here reference for current location"
+      ]
+    },
+    {
+      "id": "walker_05",
+      "level": 4,
+      "category": "Walkers",
+      "task": "Create a walker that uses 'report' to stream a value back to the caller",
+      "points": 20,
+      "hints": [
+        "Report statement for returning values"
+      ]
+    },
+    {
+      "id": "advanced_01",
+      "level": 5,
+      "category": "Advanced Graph",
+      "task": "Create a walker that filters nodes by an attribute value (e.g., ?attr == value)",
+      "points": 25,
+      "hints": [
+        "Attribute filtering syntax in visit statements"
+      ]
+    },
+    {
+      "id": "advanced_02",
+      "level": 5,
+      "category": "Advanced Graph",
+      "task": "Create a walker that filters by edge type using ->:EdgeType:->",
+      "points": 25,
+      "hints": [
+        "Edge type filtering"
+      ]
+    },
+    {
+      "id": "advanced_03",
+      "level": 5,
+      "category": "Advanced Graph",
+      "task": "Create a multi-hop traversal that goes 3 levels deep (node --> --> -->)",
+      "points": 25,
+      "hints": [
+        "Multi-hop traversal syntax"
+      ]
+    },
+    {
+      "id": "advanced_04",
+      "level": 5,
+      "category": "Advanced Graph",
+      "task": "Create a walker that uses 'disengage' to exit early",
+      "points": 25,
+      "hints": [
+        "Walker control flow with disengage"
+      ]
+    },
+    {
+      "id": "advanced_05",
+      "level": 5,
+      "category": "Advanced Graph",
+      "task": "Create edge with an ability that triggers on walker entry",
+      "points": 25,
+      "hints": [
+        "Edge abilities"
+      ]
+    },
+    {
+      "id": "ai_01",
+      "level": 6,
+      "category": "AI Integration",
+      "task": "Import Model from byllm module",
+      "points": 30,
+      "hints": [
+        "Import syntax for byllm"
+      ]
+    },
+    {
+      "id": "ai_02",
+      "level": 6,
+      "category": "AI Integration",
+      "task": "Create a global LLM model instance with model name 'gpt-4o-mini'",
+      "points": 30,
+      "hints": [
+        "Model initialization"
+      ]
+    },
+    {
+      "id": "ai_03",
+      "level": 6,
+      "category": "AI Integration",
+      "task": "Create an AI function using 'by llm()' that generates a greeting",
+      "points": 30,
+      "hints": [
+        "AI function syntax with by keyword"
+      ]
+    },
+    {
+      "id": "ai_04",
+      "level": 6,
+      "category": "AI Integration",
+      "task": "Create a semantic string using 'sem' keyword to describe an attribute",
+      "points": 30,
+      "hints": [
+        "Semantic annotation syntax"
+      ]
+    },
+    {
+      "id": "ai_05",
+      "level": 6,
+      "category": "AI Integration",
+      "task": "Create an AI function that returns an enum type to constrain LLM output",
+      "points": 30,
+      "hints": [
+        "Enum as return type for AI functions"
+      ]
+    },
+    {
+      "id": "cloud_01",
+      "level": 7,
+      "category": "Cloud",
+      "task": "Create a walker with __specs__ that allows GET and POST methods",
+      "points": 35,
+      "hints": [
+        "Walker specs configuration",
+        "HTTP methods"
+      ]
+    },
+    {
+      "id": "cloud_02",
+      "level": 7,
+      "category": "Cloud",
+      "task": "Create a walker that disables authentication using __specs__",
+      "points": 35,
+      "hints": [
+        "Auth configuration in specs"
+      ]
+    },
+    {
+      "id": "cloud_03",
+      "level": 7,
+      "category": "Cloud",
+      "task": "Create a walker with a custom path in __specs__",
+      "points": 35,
+      "hints": [
+        "Custom endpoint path"
+      ]
+    },
+    {
+      "id": "cloud_04",
+      "level": 7,
+      "category": "Cloud",
+      "task": "Create a walker that marks all parameters as query params using as_query",
+      "points": 35,
+      "hints": [
+        "Query parameter configuration"
+      ]
+    },
+    {
+      "id": "cloud_05",
+      "level": 7,
+      "category": "Cloud",
+      "task": "Create a private walker that won't auto-generate an endpoint",
+      "points": 35,
+      "hints": [
+        "Private walker configuration"
+      ]
+    },
+    {
+      "id": "integration_01",
+      "level": 8,
+      "category": "Integration",
+      "task": "Create a complete graph with Person nodes, Friendship edges, and a walker to traverse",
+      "points": 40,
+      "hints": [
+        "Complete social graph pattern"
+      ]
+    },
+    {
+      "id": "integration_02",
+      "level": 8,
+      "category": "Integration",
+      "task": "Create a state machine using nodes for states and a walker for transitions",
+      "points": 40,
+      "hints": [
+        "State machine pattern"
+      ]
+    },
+    {
+      "id": "integration_03",
+      "level": 8,
+      "category": "Integration",
+      "task": "Create error handling with try-except in a walker",
+      "points": 40,
+      "hints": [
+        "Exception handling"
+      ]
+    },
+    {
+      "id": "integration_04",
+      "level": 8,
+      "category": "Integration",
+      "task": "Create an async function using async/await",
+      "points": 40,
+      "hints": [
+        "Async syntax"
+      ]
+    },
+    {
+      "id": "integration_05",
+      "level": 8,
+      "category": "Integration",
+      "task": "Create a complete CRUD walker with create, read, update, delete operations",
+      "points": 40,
+      "hints": [
+        "CRUD pattern with persistence"
+      ]
+    }
+  ]
+}
