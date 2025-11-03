@@ -531,8 +531,31 @@ class JacBenchmark:
     def run_benchmark(self, responses_file: str) -> Dict:
         """Run benchmark on LLM responses from file"""
         # Load responses
-        with open(responses_file, 'r') as f:
-            responses = json.load(f)
+        try:
+            with open(responses_file, 'r') as f:
+                responses = json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"\n{'='*70}")
+            print(f"ERROR: Invalid JSON in '{responses_file}'")
+            print(f"{'='*70}")
+            print(f"\nJSON Parsing Error at line {e.lineno}, column {e.colno} (character {e.pos}):")
+            print(f"  {e.msg}")
+            print(f"\nCommon causes:")
+            print(f"  - Trailing comma after last entry (not allowed in JSON)")
+            print(f"  - Missing quotes around property names")
+            print(f"  - Unescaped quotes or newlines in strings")
+            print(f"  - Invalid escape sequences")
+            print(f"\nTo debug:")
+            print(f"  1. Check line {e.lineno} in the file")
+            print(f"  2. Look for trailing commas before closing braces")
+            print(f"  3. Validate JSON with: python3 -m json.tool {responses_file}")
+            print(f"\n{'='*70}\n")
+            raise SystemExit(1)
+        except FileNotFoundError:
+            print(f"\n{'='*70}")
+            print(f"ERROR: File not found: '{responses_file}'")
+            print(f"{'='*70}\n")
+            raise SystemExit(1)
 
         results = []
         category_scores = {}
@@ -622,103 +645,29 @@ class JacBenchmark:
         print()
         print("=" * 80)
 
-    def export_test_prompts(self, output_file: str):
-        """Export test prompts for LLMs"""
-        prompts = {
-            "instructions": """
-# Jac Language LLM Benchmark - Test Instructions
-
-You are being tested on your ability to write Jac code based on documentation.
-For each test case, write ONLY the Jac code that solves the task.
-
-## Important Rules:
-1. Write complete, syntactically correct Jac code
-2. Follow all Jac syntax conventions (semicolons, braces, type annotations)
-3. Do NOT include explanations or markdown - ONLY code
-4. Each response should be valid Jac code that could run
-5. Pay attention to required elements mentioned in hints
-
-## Response Format:
-Your response file should be a JSON object where:
-- Keys are test IDs (e.g., "basic_01", "walker_03")
-- Values are the Jac code as strings
-
-Example format:
-{
-    "basic_01": "with entry {\\n    print(\\"Hello, Jac!\\");\\n}",
-    "basic_02": "glob counter: int = 0;\\n\\nwith entry {\\n    print(:g:counter);\\n}"
-}
-
-## Test Cases:
-""",
-            "tests": []
-        }
-
-        for test in self.tests:
-            prompts["tests"].append({
-                "id": test["id"],
-                "level": test["level"],
-                "category": test["category"],
-                "task": test["task"],
-                "points": test["points"],
-                "hints": test["hints"]
-            })
-
-        with open(output_file, 'w') as f:
-            json.dump(prompts, f, indent=2)
-
-        print(f"Test prompts exported to {output_file}")
-        print(f"Total tests: {len(self.tests)}")
-        print(f"Total possible points: {sum(t['points'] for t in self.tests)}")
-
 
 def main():
     """Main execution"""
     benchmark = JacBenchmark()
 
     if len(sys.argv) < 2:
-        print("Jac Language LLM Benchmark")
+        print("Jac Language LLM Benchmark Evaluator")
         print("\nUsage:")
-        print("  python jac_llm_benchmark.py export <output_file>")
-        print("      Export test prompts for LLMs")
-        print("\n  python jac_llm_benchmark.py evaluate <responses_file>")
-        print("      Evaluate LLM responses (outputs to stdout)")
+        print("  python jac_llm_benchmark.py <responses_file>")
         print("\nExample:")
-        print("  python jac_llm_benchmark.py export test_prompts.json")
-        print("  python jac_llm_benchmark.py evaluate llm_responses.json")
+        print("  python jac_llm_benchmark.py llm_responses.json")
         return
 
-    command = sys.argv[1]
+    responses_file = sys.argv[1]
 
-    if command == "export":
-        if len(sys.argv) < 3:
-            print("Error: Please specify output file")
-            print("Usage: python jac_llm_benchmark.py export <output_file>")
-            return
+    if not Path(responses_file).exists():
+        print(f"Error: Responses file not found: {responses_file}")
+        return
 
-        output_file = sys.argv[2]
-        benchmark.export_test_prompts(output_file)
-
-    elif command == "evaluate":
-        if len(sys.argv) < 3:
-            print("Error: Please specify responses file")
-            print("Usage: python jac_llm_benchmark.py evaluate <responses_file>")
-            return
-
-        responses_file = sys.argv[2]
-
-        if not Path(responses_file).exists():
-            print(f"Error: Responses file not found: {responses_file}")
-            return
-
-        print(f"Running benchmark on {responses_file}...")
-        print()
-        results = benchmark.run_benchmark(responses_file)
-        benchmark.generate_report(results)
-
-    else:
-        print(f"Unknown command: {command}")
-        print("Valid commands: export, evaluate")
+    print(f"Running benchmark on {responses_file}...")
+    print()
+    results = benchmark.run_benchmark(responses_file)
+    benchmark.generate_report(results)
 
 
 if __name__ == "__main__":
