@@ -1,37 +1,22 @@
 # Jac Language Coding Test
 
-## Task
-Write valid Jac code for each test case below. Return responses as JSON.
+## Instructions
+Write valid Jac code for each test case in `test_prompts.json`. Refer only to the provided documentation file.
 
-## Documentation
-Refer only to the documentation file that you were provided. 
+Return a single JSON object mapping test IDs to code strings. Output the JSON to a file named "tests/test-<documentation_name>.txt", where `<documentation_name>` is the name of the documentation file you read.
 
-## Response Format
-Return JSON object mapping test IDs to code strings:
-
+**Example JSON Format:**
 ```json
 {
     "basic_01": "with entry {\n    print(\"Hello, Jac!\");\n}",
-    "basic_02": "glob counter: int = 0;\n\nwith entry {\n    print(:g:counter);\n}",
     "obj_01": "obj Person {\n    has name: str;\n    has age: int;\n}"
 }
 ```
-Output to "tests/test-<documentation name>.txt", documentation name being the name of the txt file that you were instructed to read. 
 
-## Test Cases
-See `test_prompts.json` for all 40 test cases with:
-- `id`: Test identifier (use as JSON key)
-- `task`: What to implement
-- `hints`: Required elements to include
-- `points`: Point value
+**Requirements:**
+- Your response must be a single, valid JSON object containing all 40 test cases.
+- The code must be valid Jac syntax, not Python. Use hints provided in `test_prompts.json`.
+- Do not include explanations or comments in the code.
+- Ensure all strings are properly escaped (e.g., `\n`, `\"`).
+- The JSON must be well-formed: no trailing commas, and all brackets/parentheses must be correctly matched.
 
-## Important
-- Write ONLY valid Jac code, no explanations
-- When unsure of certain syntax, refer back to the documentation file you were provided
-- Include all required elements from hints
-- Use proper Jac syntax (not Python syntax)
-- Escape strings properly in JSON (`\n` for newlines, `\"` for quotes)
-- **NO trailing commas** - the last entry must NOT have a comma before the closing brace
-- Ensure valid JSON syntax (test with a JSON validator)
-- **Double-check all closing brackets/parentheses** - ensure every opening `{`, `(`, `[` has a matching closing `}`, `)`, `]`
-- Output all 40 tests

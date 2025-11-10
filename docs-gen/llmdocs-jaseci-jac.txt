@@ -1,0 +1,35 @@
+Jac is an object-spatial programming language, a superset of Python, designed for AI and graph-based applications. Core concepts include nodes, edges, and walkers for mobile computation.
+
+**Syntax & Types**: Mandatory type annotations (e.g., `my_var: str = "value";`). Basic types: `int`, `float`, `str`, `bool`. `any` for dynamic typing. Control flow (`if/elif/else`, `for`, `while`) uses curly braces `{}`. `with entry { ... }` is the main execution block. Global variables with `glob`.
+
+**OOP in Jac**: `obj` defines objects. `has` declares attributes, creating an automatic constructor (no `__init__`). `impl` separates method implementation (e.g., `impl MyObj.my_method { ... }`). Access control is enforced: `:pub` (public, default), `:priv` (private), `:protect` (protected for subclasses). Inheritance uses `obj SubType(BaseType) { ... }`.
+
+**Object-Spatial Programming (OSP)**:
+- **Nodes**: Stateful entities in a graph, defined with `node MyNode { has attr: type; }`.
+- **Edges**: Typed, directional relationships. `edge MyEdge { has property: type; }`.
+- **Walkers**: Mobile computation units. `walker MyWalker { has state: type; }`.
+
+**Graph Operations**:
+- **Creation**: `root ++> MyNode();` connects a new node to the graph. `node1 +:MyEdge:+> node2;` creates a typed edge.
+- **Traversal**: `walker spawn node;` starts a walker. `visit [-->];` tells a walker to traverse outgoing edges. `disengage;` stops a walker.
+- **Context Keywords**: `here` refers to the current node within a walker's ability. `visitor` refers to the walker from within a node's ability.
+- **Data Spatial Expressions**: `-->` (outgoing edge), `<--` (incoming). Filtering: `[-->(?NodeType)]` filters by node type. `[-->(?NodeType: attr > 10)]` filters by attribute. `[->:MyEdge:->]` filters by edge type.
+
+**Abilities**: `can` blocks in nodes/edges that trigger for specific walkers. `can my_ability with MyWalker entry { ... }` executes when `MyWalker` arrives. `exit` triggers on departure.
+
+**`byLLM` (Meaning-Typed Programming)**: Integrates LLMs directly.
+- **AI Functions**: `def my_ai_func(prompt: str) -> str by llm;` lets an LLM implement the function.
+- **Model Config**: `glob llm = Model(model_name="gpt-4o", temperature=0.7);` configures the LLM.
+- **Multimodality**: Pass `Image("path.jpg")` or `Video("path.mp4")` to `byLLM` functions.
+- **Context**: Use docstrings and `sem` semantic strings (`sem MyNode.attr = "description";`) to provide context to the LLM.
+- **Tools (ReAct)**: `def agent_func() by llm(tools=[my_tool_func]);` allows the LLM to use other functions as tools.
+
+**Jac Cloud**: Turns a Jac program into a production-ready API server with `jac serve my_app.jac`.
+- **API Endpoints**: Walkers automatically become REST endpoints. Configure with an inner `obj __specs__ { static has methods: list = ["get"]; static has auth: bool = False; }`.
+- **Persistence**: Nodes and edges connected to the special `root` node are automatically persisted in a database when using `jac serve`.
+- **Async & Scheduling**: `async walker` for non-blocking tasks. `schedule` in `__specs__` for cron/interval-based execution.
+- **WebSockets**: `methods: ["websocket"]` in `__specs__` enables real-time communication. Use `socket.notify_clients()` etc. from `jac_cloud.plugin`.
+
+**Testing**: Jac has a built-in test runner. Create a `my_app.test.jac` file.
+- **Test Blocks**: `test "my feature" { ... }` defines a test case.
+- **Assertions**: `check my_node.value == 10;` asserts a condition. Graph structures can be checked with spatial queries.
