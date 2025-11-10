@@ -14,7 +14,7 @@ Return a single JSON object mapping test IDs to code strings. Output the JSON to
 ```
 
 **Requirements:**
-- Your response must be a single, valid JSON object containing all 100 test cases.
+- Your response must be a single, valid JSON object containing all test cases.
 - The code must be valid Jac syntax, not Python. Use hints provided in `test_prompts.json`.
 - Do not include explanations or comments in the code.
 - Ensure all strings are properly escaped (e.g., `\n`, `\"`).

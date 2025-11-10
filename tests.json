@@ -1641,5 +1641,558 @@
     "hints": [
       "Friend-of-friend recommendation pattern"
     ]
+  },
+  {
+    "id": "prod_websocket_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create a WebSocket walker that uses socket.notify_channels to broadcast to specific channels",
+    "required_elements": [
+      "walker",
+      "__specs__",
+      "websocket",
+      "import",
+      "WEBSOCKET_MANAGER",
+      "notify_channels"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "WebSocket configuration with channel broadcasting"
+    ]
+  },
+  {
+    "id": "prod_permissions_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create a node with custom __jac_access__ method that checks ownership and returns appropriate permission level",
+    "required_elements": [
+      "node",
+      "def __jac_access__",
+      "if",
+      "return",
+      "WritePerm",
+      "ReadPerm"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Custom access control with conditional permissions"
+    ]
+  },
+  {
+    "id": "prod_cache_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create a caching walker that checks expiration time and regenerates cached values when expired",
+    "required_elements": [
+      "walker",
+      "node Cache",
+      "has expires",
+      "if",
+      "time()",
+      ">"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Time-based cache invalidation pattern"
+    ]
+  },
+  {
+    "id": "prod_validation_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create a walker that validates input parameters and raises appropriate errors for invalid data",
+    "required_elements": [
+      "walker",
+      "if",
+      "raise",
+      "ValueError"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Input validation with error handling"
+    ]
+  },
+  {
+    "id": "prod_pagination_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create a paginated query walker that filters nodes and returns slice with metadata (total, page, items)",
+    "required_elements": [
+      "walker",
+      "has page",
+      "has per_page",
+      "[-->",
+      "](?",
+      "[",
+      ":",
+      "]",
+      "len("
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Pagination with filtering and metadata"
+    ]
+  },
+  {
+    "id": "prod_scheduler_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create a scheduled walker with cron trigger for daily execution and save: True option",
+    "required_elements": [
+      "walker",
+      "__specs__",
+      "static has schedule",
+      "trigger",
+      "cron",
+      "hour",
+      "save"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Cron-based scheduled tasks with persistence"
+    ]
+  },
+  {
+    "id": "prod_versioning_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create a document versioning system with version history tracking using separate Version nodes",
+    "required_elements": [
+      "node Document",
+      "node DocumentVersion",
+      "has version",
+      "++>",
+      "has content"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Version control pattern with history nodes"
+    ]
+  },
+  {
+    "id": "prod_softdelete_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create soft delete pattern with is_deleted flag and query that filters out deleted items",
+    "required_elements": [
+      "node",
+      "has is_deleted: bool",
+      "[-->",
+      "](?",
+      "not is_deleted"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Soft delete with filtered queries"
+    ]
+  },
+  {
+    "id": "prod_audit_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create an audit log walker that records user actions with timestamp, user_id, and action details",
+    "required_elements": [
+      "walker",
+      "node AuditLog",
+      "has timestamp",
+      "has user_id",
+      "has action",
+      "root",
+      "++>"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Audit trail with structured logging"
+    ]
+  },
+  {
+    "id": "prod_ratelimit_01",
+    "level": 10,
+    "category": "Production Patterns",
+    "task": "Create rate limiting logic that tracks request count per time window and raises error when exceeded",
+    "required_elements": [
+      "node RateLimit",
+      "has count",
+      "has window_start",
+      "if",
+      ">",
+      "raise"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Rate limiting with time windows"
+    ]
+  },
+  {
+    "id": "advanced_ai_stream_01",
+    "level": 10,
+    "category": "Advanced AI",
+    "task": "Create an AI function with streaming enabled and iterate over tokens in a for loop",
+    "required_elements": [
+      "def",
+      "by llm(",
+      "stream",
+      "True",
+      "for",
+      "in"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Streaming AI responses with token iteration"
+    ]
+  },
+  {
+    "id": "advanced_ai_multimodal_01",
+    "level": 10,
+    "category": "Advanced AI",
+    "task": "Create a walker that processes Image input and calls an AI function to analyze it",
+    "required_elements": [
+      "walker",
+      "import",
+      "Image",
+      "Image(",
+      "def",
+      "by llm()"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Multimodal AI with image processing"
+    ]
+  },
+  {
+    "id": "advanced_ai_react_01",
+    "level": 10,
+    "category": "Advanced AI",
+    "task": "Create ReAct AI function with multiple tools and method='ReAct' parameter",
+    "required_elements": [
+      "def",
+      "by llm(",
+      "method",
+      "ReAct",
+      "tools",
+      "["
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "ReAct pattern with tool array"
+    ]
+  },
+  {
+    "id": "advanced_ai_structured_01",
+    "level": 10,
+    "category": "Advanced AI",
+    "task": "Create AI function that returns custom object type for structured extraction from text",
+    "required_elements": [
+      "obj",
+      "has",
+      "def",
+      "->",
+      "by llm()"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Structured output extraction"
+    ]
+  },
+  {
+    "id": "advanced_graph_complex_filter_01",
+    "level": 10,
+    "category": "Advanced Graph",
+    "task": "Create traversal combining node type filter, attribute filter, and edge type filter in single query",
+    "required_elements": [
+      "visit",
+      "`?",
+      "](?",
+      "->:",
+      ":->"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Complex multi-condition graph query"
+    ]
+  },
+  {
+    "id": "advanced_graph_pathfind_01",
+    "level": 10,
+    "category": "Advanced Graph",
+    "task": "Implement shortest path walker using distances dictionary and unvisited set tracking",
+    "required_elements": [
+      "walker",
+      "has distances: dict",
+      "has unvisited: set",
+      "if",
+      "visit",
+      "disengage"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Dijkstra-style path finding"
+    ]
+  },
+  {
+    "id": "advanced_graph_cycle_01",
+    "level": 10,
+    "category": "Advanced Graph",
+    "task": "Create cycle detection walker using visited set to track and report cycles",
+    "required_elements": [
+      "walker",
+      "has visited: set",
+      "in",
+      "if",
+      "report"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Cycle detection in graphs"
+    ]
+  },
+  {
+    "id": "advanced_persist_transaction_01",
+    "level": 10,
+    "category": "Advanced Persistence",
+    "task": "Create transaction-like pattern with save() for multiple objects followed by single commit()",
+    "required_elements": [
+      "save(",
+      "save(",
+      "commit()"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Batch persistence with commit"
+    ]
+  },
+  {
+    "id": "advanced_persist_reference_01",
+    "level": 10,
+    "category": "Advanced Persistence",
+    "task": "Store node ID as string and later retrieve node using & reference operator",
+    "required_elements": [
+      ".id",
+      "&",
+      "str"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Node reference persistence and retrieval"
+    ]
+  },
+  {
+    "id": "advanced_cloud_webhook_01",
+    "level": 10,
+    "category": "Advanced Cloud",
+    "task": "Create webhook walker with header-based authentication configuration in __specs__",
+    "required_elements": [
+      "walker",
+      "__specs__",
+      "static has webhook",
+      "type",
+      "header",
+      "name"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Webhook authentication setup"
+    ]
+  },
+  {
+    "id": "advanced_cloud_async_retrieve_01",
+    "level": 10,
+    "category": "Advanced Cloud",
+    "task": "Spawn async walker, capture task_id, then retrieve status using __jac__.status",
+    "required_elements": [
+      "async walker",
+      "spawn",
+      "=",
+      "&",
+      "__jac__.status"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Async task tracking pattern"
+    ]
+  },
+  {
+    "id": "advanced_cloud_query_params_01",
+    "level": 10,
+    "category": "Advanced Cloud",
+    "task": "Create walker with specific parameters as query params using as_query list in __specs__",
+    "required_elements": [
+      "walker",
+      "__specs__",
+      "static has as_query",
+      "[",
+      "]"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Selective query parameter mapping"
+    ]
+  },
+  {
+    "id": "integration_error_handling_01",
+    "level": 10,
+    "category": "Integration",
+    "task": "Create walker with try-except that catches specific error, logs it, and reports fallback value",
+    "required_elements": [
+      "walker",
+      "try",
+      "except",
+      "as",
+      "print",
+      "report"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Graceful error handling with fallback"
+    ]
+  },
+  {
+    "id": "integration_external_api_01",
+    "level": 10,
+    "category": "Integration",
+    "task": "Import requests library and create walker that fetches external API with error handling",
+    "required_elements": [
+      "import requests",
+      "walker",
+      "try",
+      "requests.get",
+      "except"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "External API integration with safety"
+    ]
+  },
+  {
+    "id": "integration_conditional_visit_01",
+    "level": 10,
+    "category": "Integration",
+    "task": "Create walker with visit [-->] else {disengage;} fallback pattern",
+    "required_elements": [
+      "walker",
+      "visit",
+      "[-->]",
+      "else",
+      "disengage"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Conditional traversal with termination"
+    ]
+  },
+  {
+    "id": "integration_multi_ability_01",
+    "level": 10,
+    "category": "Integration",
+    "task": "Create node with both entry and exit abilities for same walker type",
+    "required_elements": [
+      "node",
+      "can",
+      "with",
+      "entry",
+      "can",
+      "with",
+      "exit"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Lifecycle hooks on single node"
+    ]
+  },
+  {
+    "id": "integration_batch_process_01",
+    "level": 10,
+    "category": "Integration",
+    "task": "Create walker that processes multiple items with save() in loop then single commit() at end",
+    "required_elements": [
+      "walker",
+      "for",
+      "in",
+      "save(",
+      "commit()"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Batch processing with deferred commit"
+    ]
+  },
+  {
+    "id": "integration_visitor_communication_01",
+    "level": 10,
+    "category": "Integration",
+    "task": "Create node ability that modifies visitor walker's state using visitor reference",
+    "required_elements": [
+      "node",
+      "can",
+      "with",
+      "entry",
+      "visitor."
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Node-walker communication via visitor"
+    ]
+  },
+  {
+    "id": "integration_root_ability_01",
+    "level": 10,
+    "category": "Integration",
+    "task": "Create walker ability that specifically triggers on root node using `root entry",
+    "required_elements": [
+      "walker",
+      "can",
+      "with `root entry"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Root-specific walker abilities"
+    ]
+  },
+  {
+    "id": "integration_edge_traversal_01",
+    "level": 10,
+    "category": "Integration",
+    "task": "Create walker that accesses edges directly using [node --->] edge collection syntax",
+    "required_elements": [
+      "walker",
+      "[",
+      "--->]",
+      "for",
+      "in"
+    ],
+    "forbidden_elements": [],
+    "points": 60,
+    "hints": [
+      "Direct edge access and iteration"
+    ]
   }
 ]

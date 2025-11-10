@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Usage: ./benchmark.py [eval FILE | eval-all | gen | stats | compare DIR1 DIR2] - Jac language LLM benchmark suite
+# Usage: ./benchmark.py [eval FILE | eval-all | gen | stats | stash | clean | compare DIR1 DIR2] - Jac language LLM benchmark suite
 
 import json
 import re
@@ -23,17 +23,18 @@ class JacBenchmark:
             return json.load(f)
 
     def evaluate_code(self, code: str, test_case: Dict) -> Dict:
-        """Evaluate generated code against test requirements"""
+        """Evaluate generated code against test requirements with strict validation"""
         score = 0
         max_score = test_case["points"]
         feedback = []
         passed_checks = []
         failed_checks = []
 
-        # Check for required elements
+        # Check for required elements with stricter pattern-based validation
         required_found = 0
         for element in test_case["required_elements"]:
-            if element in code:
+            found = self._validate_element_strict(code, element)
+            if found:
                 required_found += 1
                 passed_checks.append(f"✓ Found required element: '{element}'")
             else:
@@ -64,9 +65,14 @@ class JacBenchmark:
 
         score = max(0, required_score - forbidden_penalty)
 
-        # Additional syntax checks
+        # Additional syntax checks with heavier penalties
         syntax_checks = self.check_syntax(code)
         feedback.extend(syntax_checks)
+
+        # Apply syntax error penalty (10% per error, up to 50% total)
+        syntax_errors = len([c for c in syntax_checks if c.startswith('⚠')])
+        syntax_penalty = min(syntax_errors * 0.10 * max_score, max_score * 0.50)
+        score = max(0, score - syntax_penalty)
 
         return {
             "test_id": test_case["id"],
@@ -80,8 +86,146 @@ class JacBenchmark:
             "passed_checks": passed_checks,
             "failed_checks": failed_checks,
             "syntax_feedback": syntax_checks,
+            "syntax_errors": syntax_errors,
             "code": code
         }
+
+    def _validate_element_strict(self, code: str, element: str) -> bool:
+        """
+        Strictly validate element presence with context-aware pattern matching.
+        Returns True only if element appears in proper syntactic context.
+        """
+        # Normalize whitespace for consistent matching
+        code_normalized = ' '.join(code.split())
+
+        # Define strict validation patterns for common Jac keywords
+        strict_patterns = {
+            'walker': r'\bwalker\s+\w+\s*\{',  # walker must have name and opening brace
+            'node': r'\bnode\s+\w+\s*\{',      # node must have name and opening brace
+            'edge': r'\bedge\s+\w+\s*\{',      # edge must have name and opening brace
+            'obj': r'\bobj\s+\w+\s*\{',        # obj must have name and opening brace
+            'enum': r'\benum\s+\w+\s*\{',      # enum must have name and opening brace
+            'has': r'\bhas\s+\w+\s*:\s*\w+',   # has must have type annotation
+            'can': r'\bcan\s+\w+\s+with\s+',   # can must have 'with' clause
+            'with entry': r'\bwith\s+entry\s*\{',  # with entry must have block
+            'with exit': r'\bwith\s+exit\s*\{',    # with exit must have block
+            'visit': r'\bvisit\s+[^\s;]+',     # visit must have target
+            'spawn': r'\bspawn\s+\w+\s*\(',    # spawn must have walker call
+            'by llm': r'\bby\s+llm\s*\(',      # by llm must have parentheses
+            'import': r'\bimport\s+',          # import statement
+            'from': r'\bfrom\s+\w+\s*\{',      # from import with braces
+            'return': r'\breturn\s+',          # return statement
+            'report': r'\breport\s+',          # report statement
+            'def': r'\bdef\s+\w+\s*\(',        # function must have name and params
+            'async': r'\basync\s+(walker|def)', # async must be before walker/def
+            '__specs__': r'\bobj\s+__specs__\s*\{', # __specs__ must be in obj block
+            'socket.notify': r'socket\.notify(_channels)?\s*\(',  # socket notify call
+            'here': r'\bhere\s*\.',            # here reference
+            'self': r'\bself\s*\.',            # self reference
+            '-[': r'-\[\w+\]\->', # edge traversal syntax
+            '-->': r'-->', # forward edge traversal
+            '<--': r'<--', # backward edge traversal
+        }
+
+        # Try strict pattern first if defined
+        if element in strict_patterns:
+            pattern = strict_patterns[element]
+            if re.search(pattern, code):
+                return True
+            # If strict pattern not found, return False (no fallback)
+            return False
+
+        # For elements with specific patterns, use stricter matching
+        if ':' in element and 'has' not in code:
+            # Type annotation required but 'has' not found
+            return False
+
+        if element.startswith('def ') and 'def' in code:
+            # Function definition - require proper structure
+            func_name = element.split()[1] if len(element.split()) > 1 else None
+            if func_name:
+                pattern = rf'\bdef\s+{re.escape(func_name)}\s*\([^)]*\)'
+                return bool(re.search(pattern, code))
+
+        # For walker/node/edge names, require proper declaration
+        for keyword in ['walker', 'node', 'edge', 'obj', 'enum']:
+            if element.startswith(keyword + ' '):
+                name = element.split()[1] if len(element.split()) > 1 else None
+                if name:
+                    pattern = rf'\b{keyword}\s+{re.escape(name)}\s*\{{'
+                    return bool(re.search(pattern, code))
+
+        # Check for method calls - require parentheses
+        if '.' in element and '(' not in element:
+            # Method name without parentheses in element - require it in code
+            method_pattern = re.escape(element) + r'\s*\('
+            if re.search(method_pattern, code):
+                return True
+            return False
+
+        # Check for attribute access - require it to be complete
+        if element.count('.') == 1 and '(' not in element:
+            # Attribute access like "self.name" - be stricter
+            parts = element.split('.')
+            if len(parts) == 2:
+                pattern = rf'\b{re.escape(parts[0])}\.{re.escape(parts[1])}\b'
+                return bool(re.search(pattern, code))
+
+        # For string literals, require exact match with quotes
+        if element.startswith('"') or element.startswith("'"):
+            return element in code
+
+        # For operators and special symbols, require as-is
+        if element in ['==', '!=', '<=', '>=', '+=', '-=', '*=', '/=', '**', '//',
+                       '<<', '>>', '&', '|', '^', '~', 'and', 'or', 'not', 'in', 'is']:
+            return element in code
+
+        # Fallback: simple substring match for generic elements
+        # But still require word boundaries for identifiers
+        if element.replace('_', '').isalnum():
+            # It's an identifier - require word boundaries
+            pattern = rf'\b{re.escape(element)}\b'
+            return bool(re.search(pattern, code))
+        else:
+            # Non-identifier - simple substring match
+            return element in code
+
+    def patch_missing_braces(self, code: str) -> tuple[str, bool]:
+        """
+        Patch missing closing braces/brackets/parentheses at the end of code.
+        LLMs often truncate the final closing brace.
+        Returns: (patched_code, was_patched)
+        """
+        was_patched = False
+        original_code = code
+
+        # Count all types of brackets
+        open_braces = code.count('{')
+        close_braces = code.count('}')
+        open_brackets = code.count('[')
+        close_brackets = code.count(']')
+        open_parens = code.count('(')
+        close_parens = code.count(')')
+
+        # Patch missing closing braces (most common issue)
+        if open_braces > close_braces:
+            missing = open_braces - close_braces
+            code = code + '\n' + '}' * missing
+            was_patched = True
+
+        # Patch missing closing brackets
+        if open_brackets > close_brackets:
+            missing = open_brackets - close_brackets
+            code = code + ']' * missing
+            was_patched = True
+
+        # Patch missing closing parentheses
+        if open_parens > close_parens:
+            missing = open_parens - close_parens
+            code = code + ')' * missing
+            was_patched = True
+
+        return code, was_patched
 
     def check_syntax(self, code: str) -> List[str]:
         """Enhanced syntax validation checks for Jac code"""
@@ -93,6 +237,40 @@ class JacBenchmark:
 
         if re.search(r'\bwith exit\b', code) and not re.search(r'with exit\s*{', code):
             checks.append("⚠ 'with exit' should be followed by a block { }")
+
+        # Check for walker/node/edge/obj/enum declarations
+        for keyword in ['walker', 'node', 'edge', 'obj', 'enum']:
+            if re.search(rf'\b{keyword}\s+\w+\b', code):
+                # Found keyword with name, check for opening brace
+                if not re.search(rf'\b{keyword}\s+\w+\s*{{', code):
+                    checks.append(f"⚠ '{keyword}' declaration should be followed by opening brace {{")
+
+        # Check for ability declarations
+        if re.search(r'\bcan\s+\w+\b', code):
+            if not re.search(r'\bcan\s+\w+\s+with\s+', code):
+                checks.append("⚠ 'can' ability should include 'with' clause (e.g., 'can ability_name with entry')")
+
+        # Check for visit statements
+        if re.search(r'\bvisit\b(?!\s+[^\s;]+)', code):
+            checks.append("⚠ 'visit' should be followed by a target")
+
+        # Check for spawn statements
+        if re.search(r'\bspawn\b', code) and not re.search(r'\bspawn\s+\w+\s*\(', code):
+            checks.append("⚠ 'spawn' should be followed by walker name and parentheses")
+
+        # Check for by llm syntax
+        if re.search(r'\bby\s+llm\b', code) and not re.search(r'\bby\s+llm\s*\(', code):
+            checks.append("⚠ 'by llm' should be followed by parentheses (e.g., 'by llm()')")
+
+        # Check for has declarations without type annotations
+        if re.search(r'\bhas\s+\w+\s*[=;]', code):
+            if not re.search(r'\bhas\s+\w+\s*:\s*\w+', code):
+                checks.append("⚠ 'has' attributes should have type annotations (e.g., 'has name: str')")
+
+        # Check for proper async usage
+        if re.search(r'\basync\b', code):
+            if not re.search(r'\basync\s+(walker|def)\b', code):
+                checks.append("⚠ 'async' should be used before 'walker' or 'def'")
 
         # Check for proper braces
         open_braces = code.count('{')
@@ -255,12 +433,20 @@ class JacBenchmark:
         results = []
         category_scores = {}
         level_scores = {}
+        patched_count = 0
 
         for test_case in self.tests:
             test_id = test_case["id"]
             if test_id in responses:
                 code = responses[test_id]
-                result = self.evaluate_code(code, test_case)
+
+                # Patch missing closing braces/brackets/parentheses
+                patched_code, was_patched = self.patch_missing_braces(code)
+                if was_patched:
+                    patched_count += 1
+
+                result = self.evaluate_code(patched_code, test_case)
+                result["was_patched"] = was_patched
                 results.append(result)
 
                 # Track category scores
@@ -292,6 +478,7 @@ class JacBenchmark:
                 "overall_percentage": round(overall_percentage, 2),
                 "tests_completed": len(results),
                 "tests_total": len(self.tests),
+                "patched_count": patched_count,
                 "category_breakdown": {
                     cat: {
                         "score": round(scores["score"], 2),
@@ -329,7 +516,7 @@ class JacBenchmark:
 class MultiDocEvaluator:
     """Evaluates multiple documentation test results and generates comparison report"""
 
-    VARIANTS = ['mini', 'slim', 'core', 'full']  # In increasing size order
+    VARIANTS = ['mini', 'core']  # In increasing size order
     TESTS_DIR = Path('tests')
     REPORTS_DIR = TESTS_DIR / 'reports'
     RELEASE_DIR = Path('release')  # Original documentation files
@@ -346,29 +533,39 @@ class MultiDocEvaluator:
             return file_path.stat().st_size
         return 0
 
+    def find_variant_file(self, variant: str) -> Path | None:
+        """Find test file containing variant keyword"""
+        test_files = list(self.TESTS_DIR.glob("*.txt"))
+        for file_path in test_files:
+            if variant.lower() in file_path.name.lower():
+                return file_path
+        return None
+
     def run_benchmark(self, variant: str) -> Dict:
         """Run benchmark for a specific variant"""
-        file_name = f"test-llmdocs-jaseci-{variant}.txt"
-        file_path = self.TESTS_DIR / file_name
+        file_path = self.find_variant_file(variant)
 
-        if not file_path.exists():
-            print(f"Warning: {file_path} not found, skipping...")
+        if not file_path:
+            print(f"Warning: No file containing '{variant}' found in {self.TESTS_DIR}, skipping...")
             return None
 
         # Get file size from original documentation file in release/
-        doc_file_name = f"llmdocs-jaseci-{variant}.txt"
-        doc_file_path = self.RELEASE_DIR / doc_file_name
-        file_size = self.get_file_size(doc_file_path)
+        # Search for doc file containing variant keyword
+        doc_files = list(self.RELEASE_DIR.glob("**/*.txt"))
+        doc_file_path = None
+        for doc_file in doc_files:
+            if variant.lower() in doc_file.name.lower():
+                doc_file_path = doc_file
+                break
+
+        file_size = self.get_file_size(doc_file_path) if doc_file_path else 0
         self.file_sizes[variant] = file_size
 
-        # Run benchmark using jac_llm_benchmark.py
-        print(f"Evaluating {variant}...")
+        # Run benchmark
+        print(f"Evaluating {variant} ({file_path.name})...")
         try:
-            # Import and run benchmark directly to get structured results
-            from jac_llm_benchmark import JacBenchmark
             benchmark = JacBenchmark()
             results = benchmark.run_benchmark(str(file_path))
-
             return results
 
         except json.JSONDecodeError as e:
@@ -382,16 +579,15 @@ class MultiDocEvaluator:
         """Check if all required test files exist"""
         missing = []
         for variant in self.VARIANTS:
-            file_name = f"test-llmdocs-jaseci-{variant}.txt"
-            file_path = self.TESTS_DIR / file_name
-            if not file_path.exists():
+            file_path = self.find_variant_file(variant)
+            if not file_path:
                 missing.append(variant)
 
         if missing:
             print("ERROR: Missing required test files:")
             for variant in missing:
-                print(f"  - test-llmdocs-jaseci-{variant}.txt")
-            print("\nAll four variants (core, full, mini, slim) must be present.")
+                print(f"  - No file containing '{variant}' found in {self.TESTS_DIR}")
+            print(f"\nAt least one file for each variant ({', '.join(self.VARIANTS)}) must be present.")
             return False
         return True
 
@@ -402,11 +598,24 @@ class MultiDocEvaluator:
         print("=" * 80)
         print()
 
-        # Check all files exist first
-        if not self.check_all_files_exist():
+        # Find which variants have test files
+        found_variants = []
+        for variant in self.VARIANTS:
+            if self.find_variant_file(variant):
+                found_variants.append(variant)
+
+        if not found_variants:
+            print(f"ERROR: No test files found in {self.TESTS_DIR}")
+            print(f"Looking for files containing: {', '.join(self.VARIANTS)}")
             sys.exit(1)
 
-        for variant in self.VARIANTS:
+        print(f"Found test files for: {', '.join(found_variants)}")
+        if len(found_variants) < len(self.VARIANTS):
+            missing = set(self.VARIANTS) - set(found_variants)
+            print(f"Skipping missing variants: {', '.join(missing)}")
+        print()
+
+        for variant in found_variants:
             result = self.run_benchmark(variant)
             if result:
                 self.results[variant] = result
@@ -427,7 +636,7 @@ class MultiDocEvaluator:
         # Summary Table
         print("SUMMARY TABLE")
         print("-" * 80)
-        print(f"{'Variant':<12} {'Size (bytes)':<14} {'Score':<12} {'Max':<6} {'%':<8} {'Score/KB':<12}")
+        print(f"{'Variant':<12} {'Size (bytes)':<14} {'Score':<12} {'Max':<6} {'%':<8} {'Score/KB':<12} {'Patched':<8}")
         print("-" * 80)
 
         summary_data = []
@@ -439,6 +648,7 @@ class MultiDocEvaluator:
                 max_score = summary['total_max']
                 percentage = summary['overall_percentage']
                 score_per_kb = (score / (size / 1024)) if size > 0 else 0
+                patched_count = summary.get('patched_count', 0)
 
                 summary_data.append({
                     'variant': variant,
@@ -446,10 +656,11 @@ class MultiDocEvaluator:
                     'score': score,
                     'max_score': max_score,
                     'percentage': percentage,
-                    'score_per_kb': score_per_kb
+                    'score_per_kb': score_per_kb,
+                    'patched_count': patched_count
                 })
 
-                print(f"{variant:<12} {size:<14} {score:<12.2f} {max_score:<6} {percentage:<8.2f} {score_per_kb:<12.2f}")
+                print(f"{variant:<12} {size:<14} {score:<12.2f} {max_score:<6} {percentage:<8.2f} {score_per_kb:<12.2f} {patched_count:<8}")
 
         print()
 
@@ -501,7 +712,14 @@ class MultiDocEvaluator:
         for variant in self.results:
             levels.update(self.results[variant]['summary']['level_breakdown'].keys())
 
-        for level in sorted(levels):
+        # Sort levels numerically by extracting the number
+        def sort_level_key(level_str):
+            # Extract number from "Level X" string
+            import re
+            match = re.search(r'(\d+)', level_str)
+            return int(match.group(1)) if match else 0
+
+        for level in sorted(levels, key=sort_level_key):
             print(f"\n{level}:")
             print(f"  {'Variant':<12} {'Score':<12} {'Max':<6} {'%':<8}")
             for variant in self.VARIANTS:
@@ -572,6 +790,14 @@ class MultiDocEvaluator:
         best_efficiency = max(summary_data, key=lambda x: x['score_per_kb'])
         smallest = min(summary_data, key=lambda x: x['size'])
 
+        # Sort levels numerically
+        def sort_level_key(level_str):
+            # Extract number from "Level X" string
+            match = re.search(r'(\d+)', level_str)
+            return int(match.group(1)) if match else 0
+
+        sorted_levels = sorted(levels, key=sort_level_key)
+
         # Render template
         return template.render(
             timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -579,7 +805,7 @@ class MultiDocEvaluator:
             ranked_efficiency=ranked_efficiency,
             ranked_score=ranked_score,
             categories=categories,
-            levels=levels,
+            levels=sorted_levels,
             variants=self.VARIANTS,
             results=self.results,
             file_sizes=self.file_sizes,
@@ -802,6 +1028,66 @@ def compare_directories(dir1: Path, dir2: Path, dir1_label: str = "Directory 1",
     print(output)
 
 
+def stash_test_results():
+    """Stash current test results into a timestamped directory"""
+    tests_dir = Path('tests')
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    stash_dir = tests_dir / timestamp
+
+    # Create stash directory
+    stash_dir.mkdir(parents=True, exist_ok=True)
+
+    moved_files = []
+
+    # Move test result files (test-*.txt pattern)
+    test_files = list(tests_dir.glob('test-*.txt'))
+    for file_path in test_files:
+        dest = stash_dir / file_path.name
+        file_path.rename(dest)
+        moved_files.append(file_path.name)
+
+    # Move any JSON test files
+    json_files = list(tests_dir.glob('*.json'))
+    for file_path in json_files:
+        dest = stash_dir / file_path.name
+        file_path.rename(dest)
+        moved_files.append(file_path.name)
+
+    print(f"Test results stashed in: {stash_dir}")
+    print(f"\nMoved {len(moved_files)} item(s):")
+    for item in moved_files:
+        print(f"  - {item}")
+
+    if not moved_files:
+        print("  (No test files found to stash)")
+
+
+def clean_test_results():
+    """Delete all test result files from tests directory"""
+    tests_dir = Path('tests')
+
+    deleted_files = []
+
+    # Delete test result files (test-*.txt pattern)
+    test_files = list(tests_dir.glob('test-*.txt'))
+    for file_path in test_files:
+        file_path.unlink()
+        deleted_files.append(file_path.name)
+
+    # Delete any JSON test files
+    json_files = list(tests_dir.glob('*.json'))
+    for file_path in json_files:
+        file_path.unlink()
+        deleted_files.append(file_path.name)
+
+    print(f"Deleted {len(deleted_files)} test file(s):")
+    for item in deleted_files:
+        print(f"  - {item}")
+
+    if not deleted_files:
+        print("No test files found to delete")
+
+
 def main():
     """Main execution"""
     if len(sys.argv) < 2:
@@ -812,12 +1098,16 @@ def main():
         print("  ./benchmark.py eval-all          - Evaluate all variant test files")
         print("  ./benchmark.py gen               - Generate test_prompts.json")
         print("  ./benchmark.py stats             - Show benchmark statistics")
+        print("  ./benchmark.py stash             - Stash test results to timestamped dir")
+        print("  ./benchmark.py clean             - Delete all test result files")
         print("  ./benchmark.py compare <d1> <d2> - Compare two result directories")
         print()
         print("Examples:")
         print("  ./benchmark.py eval tests/test-llmdocs-jaseci-core_v3.txt")
         print("  ./benchmark.py eval-all")
         print("  ./benchmark.py gen")
+        print("  ./benchmark.py stash")
+        print("  ./benchmark.py clean")
         print("  ./benchmark.py compare results1/ results2/")
         return
     
@@ -851,6 +1141,12 @@ def main():
     
     elif command == "stats":
         show_stats()
+
+    elif command == "stash":
+        stash_test_results()
+
+    elif command == "clean":
+        clean_test_results()
 
     elif command == "compare":
         if len(sys.argv) < 4:

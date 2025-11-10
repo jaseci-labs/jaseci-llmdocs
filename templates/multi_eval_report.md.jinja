@@ -8,11 +8,13 @@
 
 *Score/KB is calculated using the original documentation file size from release/.*
 
-| Variant | Doc Size (KB) | Score | Max | Percentage | Score/KB |
-|---------|---------------|-------|-----|------------|----------|
+| Variant | Doc Size (KB) | Score | Max | Percentage | Score/KB | Patched |
+|---------|---------------|-------|-----|------------|----------|---------|
 {% for data in summary_data -%}
-| {{ data.variant }} | {{ "%.2f"|format(data.size/1024) }} | {{ "%.2f"|format(data.score) }} | {{ data.max_score }} | {{ "%.2f"|format(data.percentage) }}% | {{ "%.2f"|format(data.score_per_kb) }} |
+| {{ data.variant }} | {{ "%.2f"|format(data.size/1024) }} | {{ "%.2f"|format(data.score) }} | {{ data.max_score }} | {{ "%.2f"|format(data.percentage) }}% | {{ "%.2f"|format(data.score_per_kb) }} | {{ data.patched_count }} |
 {% endfor %}
+
+**Patched**: Number of tests where missing closing braces/brackets/parentheses were automatically added
 
 ## Efficiency Rankings (Score per KB)
 
@@ -44,7 +46,7 @@
 
 ## Difficulty Level Comparison
 
-{% for level in levels|sort -%}
+{% for level in levels -%}
 ### {{ level }}
 
 | Variant | Score | Max | Percentage |
