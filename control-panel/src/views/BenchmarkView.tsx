@@ -28,9 +28,6 @@ export default function BenchmarkView({ models, variants, testFiles, onBenchmark
 		const saved = localStorage.getItem("benchmarkTemperature");
 		return saved ? parseFloat(saved) : 0.1;
 	});
-	const [smallSuite, setSmallSuite] = useState(() => {
-		return localStorage.getItem("benchmarkSmallSuite") === "true";
-	});
 	const [queueSize, setQueueSize] = useState(() => {
 		const saved = localStorage.getItem("benchmarkQueueSize");
 		return saved ? parseInt(saved) : 1;
@@ -53,7 +50,6 @@ export default function BenchmarkView({ models, variants, testFiles, onBenchmark
 	useEffect(() => localStorage.setItem("benchmarkModel", selectedModel), [selectedModel]);
 	useEffect(() => localStorage.setItem("benchmarkVariant", selectedVariant), [selectedVariant]);
 	useEffect(() => localStorage.setItem("benchmarkTemperature", temperature.toString()), [temperature]);
-	useEffect(() => localStorage.setItem("benchmarkSmallSuite", smallSuite.toString()), [smallSuite]);
 	useEffect(() => localStorage.setItem("benchmarkQueueSize", queueSize.toString()), [queueSize]);
 	useEffect(() => localStorage.setItem("benchmarkBatchSize", batchSize.toString()), [batchSize]);
 	useEffect(() => {
@@ -183,7 +179,6 @@ export default function BenchmarkView({ models, variants, testFiles, onBenchmark
 		setStatus({ status: "running", progress: "Starting all runs...", completed: 0, total: queueSize });
 
 		const payload: any = { model: selectedModel, variant: selectedVariant, temperature, batch_size: batchSize };
-		if (smallSuite) payload.test_limit = 40;
 
 		const runIds: string[] = [];
 		const runState: Record<string, { batches: number; completed: number; done: boolean; failed: boolean; index: number }> = {};
@@ -407,8 +402,6 @@ export default function BenchmarkView({ models, variants, testFiles, onBenchmark
 					setQueueSize={setQueueSize}
 					batchSize={batchSize}
 					setBatchSize={setBatchSize}
-					smallSuite={smallSuite}
-					setSmallSuite={setSmallSuite}
 					isRunning={isRunning}
 					onRun={runBenchmark}
 					onCancel={cancelBenchmark}

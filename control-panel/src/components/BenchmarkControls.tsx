@@ -15,8 +15,6 @@ interface Props {
 	setQueueSize: (size: number) => void;
 	batchSize: number;
 	setBatchSize: (size: number) => void;
-	smallSuite: boolean;
-	setSmallSuite: (small: boolean) => void;
 	isRunning: boolean;
 	onRun: () => void;
 	onCancel: () => void;
@@ -35,8 +33,6 @@ export default function BenchmarkControls({
 	setQueueSize,
 	batchSize,
 	setBatchSize,
-	smallSuite,
-	setSmallSuite,
 	isRunning,
 	onRun,
 	onCancel,
@@ -100,17 +96,6 @@ export default function BenchmarkControls({
 					className="w-16 px-2 py-2 bg-zinc-900 border border-terminal-border rounded text-gray-300 text-sm focus:outline-none focus:border-terminal-accent disabled:opacity-50 disabled:cursor-not-allowed text-center"
 					title="Tests per batch"
 				/>
-
-				<label className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-terminal-border rounded text-gray-300 text-sm cursor-pointer hover:border-gray-600">
-					<input
-						type="checkbox"
-						checked={smallSuite}
-						onChange={(e) => setSmallSuite(e.target.checked)}
-						disabled={isRunning}
-						className="cursor-pointer"
-					/>
-					<span>Small Suite</span>
-				</label>
 			</div>
 
 			<div className="flex gap-3 items-center">

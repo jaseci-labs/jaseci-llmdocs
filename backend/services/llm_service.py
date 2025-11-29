@@ -140,8 +140,7 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
         model_id: str,
         variant: str,
         temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        test_limit: Optional[int] = None
+        max_tokens: Optional[int] = None
     ) -> Dict:
         """Run single-call benchmark"""
         if temperature is None:
@@ -153,7 +152,7 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
         if not doc_content:
             raise ValueError(f"No documentation content found for variant '{variant}'")
 
-        tests_to_use = self.tests[:test_limit] if test_limit else self.tests
+        tests_to_use = self.tests
         prompt = self._construct_prompt(doc_content, tests_to_use)
 
         max_retries = 3
@@ -180,10 +179,9 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
 
         responses = json.loads(response_text)
 
-        test_suite_type = "small" if test_limit else "full"
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         safe_model_name = model_id.replace('/', '-')
-        run_id = f"{safe_model_name}-{variant}-{test_suite_type}-{timestamp}"
+        run_id = f"{safe_model_name}-{variant}-{timestamp}"
 
         BenchmarkResultService.create(
             run_id=run_id,
@@ -192,8 +190,6 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
             variant=variant,
             temperature=temperature,
             max_tokens=max_tokens,
-            test_limit=test_limit,
-            test_suite=test_suite_type,
             total_tests=len(tests_to_use),
             responses=responses,
             batch_size=len(tests_to_use),
@@ -205,7 +201,6 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
             'model': model_id,
             'variant': variant,
             'num_responses': len(responses),
-            'test_suite': test_suite_type,
             'responses': responses
         }
 
@@ -244,7 +239,6 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
         variant: str,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        test_limit: Optional[int] = None,
         batch_size: int = 45,
         progress_callback: Optional[Callable] = None
     ) -> Dict:
@@ -258,7 +252,7 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
         if not doc_content:
             raise ValueError(f"No documentation content found for variant '{variant}'")
 
-        tests_to_use = self.tests[:test_limit] if test_limit else self.tests
+        tests_to_use = self.tests
         num_batches = (len(tests_to_use) + batch_size - 1) // batch_size
 
         batches = []
@@ -319,10 +313,9 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
         if not responses:
             raise RuntimeError(f"No responses generated - all batches failed: {'; '.join(errors)}")
 
-        test_suite_type = "small" if test_limit else "full"
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         safe_model_name = model_id.replace('/', '-')
-        run_id = f"{safe_model_name}-{variant}-{test_suite_type}-{timestamp}"
+        run_id = f"{safe_model_name}-{variant}-{timestamp}"
 
         BenchmarkResultService.create(
             run_id=run_id,
@@ -331,8 +324,6 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
             variant=variant,
             temperature=temperature,
             max_tokens=max_tokens,
-            test_limit=test_limit,
-            test_suite=test_suite_type,
             total_tests=len(tests_to_use),
             responses=responses,
             batch_size=batch_size,
@@ -344,7 +335,6 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
             'model': model_id,
             'variant': variant,
             'num_responses': len(responses),
-            'test_suite': test_suite_type,
             'responses': responses,
             'failed_batches': failed,
             'errors': errors if errors else None
@@ -357,15 +347,14 @@ Return a JSON object mapping each test ID to Jac code. Use \\n for newlines and 
         temperature: float,
         max_tokens: int,
         batch_num: int,
-        batch_size: int = 45,
-        test_limit: Optional[int] = None
+        batch_size: int = 45
     ) -> Dict:
         """Rerun a single batch and return the responses"""
         doc_content = self.get_doc_content(variant)
         if not doc_content:
             raise ValueError(f"No documentation content found for variant '{variant}'")
 
-        tests_to_use = self.tests[:test_limit] if test_limit else self.tests
+        tests_to_use = self.tests
         start_idx = (batch_num - 1) * batch_size
         end_idx = min(start_idx + batch_size, len(tests_to_use))
         batch = tests_to_use[start_idx:end_idx]

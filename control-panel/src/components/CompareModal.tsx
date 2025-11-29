@@ -54,31 +54,27 @@ export default function CompareModal({ isOpen, onClose, results }: Props) {
 		"o1-mini": "O1 Mini",
 	};
 
-	// Parse metadata from filenames (format: model-variant-suite-timestamp)
+	// Parse metadata from filenames (format: model-variant-timestamp)
 	const parseMetadata = (filenames: string[]) => {
 		if (!filenames || filenames.length === 0) return null;
 
 		const filename = filenames[0];
 		const parts = filename.split("-");
 
-		if (parts.length >= 4) {
+		if (parts.length >= 3) {
 			const timestampIdx = parts.length - 1;
 			if (parts[timestampIdx].includes("_")) {
-				const suite = parts[timestampIdx - 1];
-				const variant = parts[timestampIdx - 2];
-				const model = parts.slice(0, timestampIdx - 2).join("-");
+				const variant = parts[timestampIdx - 1];
+				const model = parts.slice(0, timestampIdx - 1).join("-");
 
 				const displayModel = modelDisplayNames[model] || model;
 				const displayVariant = variant
 					.replace(/_/g, " ")
 					.replace(/\b\w/g, (l) => l.toUpperCase());
-				const displaySuite =
-					suite.charAt(0).toUpperCase() + suite.slice(1);
 
 				return {
 					model: displayModel,
 					variant: displayVariant,
-					suite: displaySuite,
 				};
 			}
 		}
@@ -255,10 +251,6 @@ export default function CompareModal({ isOpen, onClose, results }: Props) {
 											{metadata1.variant}
 										</span>
 										<span>-</span>
-										<span className="text-orange-400 font-semibold">
-											{metadata1.suite}
-										</span>
-										<span>-</span>
 										<span className="text-terminal-accent font-semibold">
 											x{stash1.file_count}
 										</span>
@@ -288,10 +280,6 @@ export default function CompareModal({ isOpen, onClose, results }: Props) {
 										<span>-</span>
 										<span className="text-purple-400 font-semibold">
 											{metadata2.variant}
-										</span>
-										<span>-</span>
-										<span className="text-orange-400 font-semibold">
-											{metadata2.suite}
 										</span>
 										<span>-</span>
 										<span className="text-terminal-accent font-semibold">

@@ -11,7 +11,6 @@ interface TestFile {
     model: string
     model_full: string
     variant: string
-    test_suite: string
     total_tests: string
     batch_size?: number
     num_batches?: number
@@ -27,9 +26,7 @@ interface Stash {
     model: string
     model_full: string
     variant: string
-    test_suite: string
     total_tests: string
-    batch_size?: number
   }
 }
 
@@ -464,16 +461,14 @@ export default function FileManager({
             }
 
             // Use metadata from API manifest
-            let metadata: { model: string; variant: string; suite: string; tests: string; batchSize?: number } | null = null
+            let metadata: { model: string; variant: string; tests: string; batchSize?: number } | null = null
             if (stash.metadata) {
               const displayModel = modelDisplayNames[stash.metadata.model] || stash.metadata.model
               const displayVariant = stash.metadata.variant.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-              const displaySuite = stash.metadata.test_suite.charAt(0).toUpperCase() + stash.metadata.test_suite.slice(1)
 
               metadata = {
                 model: displayModel,
                 variant: displayVariant,
-                suite: displaySuite,
                 tests: stash.metadata.total_tests,
                 batchSize: stash.metadata.batch_size
               }
@@ -504,8 +499,6 @@ export default function FileManager({
                             <span className="text-blue-400 font-semibold">{metadata.model}</span>
                             <span>-</span>
                             <span className="text-purple-400 font-semibold">{metadata.variant}</span>
-                            <span>-</span>
-                            <span className="text-orange-400 font-semibold">{metadata.suite}</span>
                             {metadata.batchSize && (
                               <>
                                 <span>-</span>

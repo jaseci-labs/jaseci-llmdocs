@@ -33,7 +33,6 @@ export interface TestFile {
 		model: string;
 		model_full: string;
 		variant: string;
-		test_suite: string;
 		total_tests: string;
 		batch_size?: number;
 		num_batches?: number;

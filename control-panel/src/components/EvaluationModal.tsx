@@ -61,20 +61,19 @@ export default function EvaluationModal({ isOpen, onClose, results }: Props) {
 		"o1-mini": "O1 Mini",
 	};
 
-	// Parse metadata from filenames (format: model-variant-suite-timestamp)
-	// Example: claude-sonnet-mini_v3-full-20251116_230045
+	// Parse metadata from filenames (format: model-variant-timestamp)
+	// Example: claude-sonnet-mini_v3-20251116_230045
 	const fileMetadata = Object.keys(results.results || {})
 		.map((filename) => {
 			const parts = filename.split("-");
 
-			if (parts.length >= 4) {
+			if (parts.length >= 3) {
 				// Find timestamp (last part with underscore)
 				const timestampIdx = parts.length - 1;
 				if (parts[timestampIdx].includes("_")) {
-					const suite = parts[timestampIdx - 1];
-					const variant = parts[timestampIdx - 2];
-					const model = parts.slice(0, timestampIdx - 2).join("-");
-					return { variant, model, suite };
+					const variant = parts[timestampIdx - 1];
+					const model = parts.slice(0, timestampIdx - 1).join("-");
+					return { variant, model };
 				}
 			}
 			return null;
@@ -87,8 +86,7 @@ export default function EvaluationModal({ isOpen, onClose, results }: Props) {
 		fileMetadata.every(
 			(m) =>
 				m?.variant === fileMetadata[0]?.variant &&
-				m?.model === fileMetadata[0]?.model &&
-				m?.suite === fileMetadata[0]?.suite
+				m?.model === fileMetadata[0]?.model
 		);
 
 	const commonMetadata =
@@ -102,9 +100,6 @@ export default function EvaluationModal({ isOpen, onClose, results }: Props) {
 		return variant
 			.replace(/_/g, " ")
 			.replace(/\b\w/g, (l) => l.toUpperCase());
-	};
-	const getDisplaySuite = (suite: string) => {
-		return suite.charAt(0).toUpperCase() + suite.slice(1);
 	};
 
 	const percentages = fileResults.map(([_, result]: [string, any]) =>
@@ -279,10 +274,6 @@ export default function EvaluationModal({ isOpen, onClose, results }: Props) {
 										{getDisplayVariant(
 											commonMetadata.variant
 										)}
-									</span>
-									<span>-</span>
-									<span className="text-orange-400 font-semibold">
-										{getDisplaySuite(commonMetadata.suite)}
 									</span>
 									<span>-</span>
 									<span className="text-terminal-accent font-semibold">

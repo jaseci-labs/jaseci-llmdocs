@@ -79,6 +79,13 @@ class EvaluatorService:
         max_score = test_case["points"]
         passed_checks = []
         failed_checks = []
+        
+        penalties = {
+            "required": 0.0,
+            "forbidden": 0.0,
+            "syntax": 0.0,
+            "jac_check": 0.0
+        }
 
         required_found = 0
         for element in test_case["required_elements"]:
@@ -102,11 +109,13 @@ class EvaluatorService:
 
         if total_required > 0:
             required_score = (required_found / total_required) * max_score
+            penalties["required"] = max_score - required_score
         else:
             required_score = max_score
 
         if total_forbidden > 0:
             forbidden_penalty = (forbidden_found / total_forbidden) * (max_score * 0.3)
+            penalties["forbidden"] = forbidden_penalty
         else:
             forbidden_penalty = 0
 
@@ -114,22 +123,26 @@ class EvaluatorService:
 
         # Legacy syntax checks
         syntax_checks = SyntaxChecker.check_syntax(code)
-        syntax_errors = len([c for c in syntax_checks if c.startswith('[WARN]')])
-        syntax_penalty = min(syntax_errors * 0.10 * max_score, max_score * 0.50)
-        score = max(0, score - syntax_penalty)
-
-        # jac check validation (50% penalty for invalid syntax)
+        
+        # jac check validation (15% penalty for invalid syntax)
         jac_valid = True
         jac_errors = []
         jac_warnings = []
         if use_jac_check:
             jac_valid, jac_errors, jac_warnings = self.jac_check(code)
             if not jac_valid:
-                jac_penalty = max_score * 0.5
+                jac_penalty = max_score * 0.15
+                penalties["jac_check"] = jac_penalty
                 score = max(0, score - jac_penalty)
                 failed_checks.append(f"[FAIL] jac check failed: {len(jac_errors)} errors")
             else:
                 passed_checks.append("[PASS] jac check passed")
+        else:
+            # Only apply heuristic syntax penalty if jac check is not used
+            syntax_errors = len([c for c in syntax_checks if c.startswith('[WARN]')])
+            syntax_penalty = min(syntax_errors * 0.10 * max_score, max_score * 0.50)
+            penalties["syntax"] = syntax_penalty
+            score = max(0, score - syntax_penalty)
 
         return {
             "test_id": test_case["id"],
@@ -137,6 +150,7 @@ class EvaluatorService:
             "level": test_case["level"],
             "score": round(score, 2),
             "max_score": max_score,
+            "score_breakdown": penalties,
             "percentage": round((score / max_score) * 100, 2),
             "required_found": f"{required_found}/{total_required}",
             "forbidden_found": forbidden_found,
@@ -181,10 +195,17 @@ class EvaluatorService:
 
                 category = test_case["category"]
                 if category not in category_scores:
-                    category_scores[category] = {"score": 0, "max": 0, "count": 0}
+                    category_scores[category] = {
+                        "score": 0, "max": 0, "count": 0,
+                        "penalties": {"required": 0, "forbidden": 0, "syntax": 0, "jac_check": 0}
+                    }
                 category_scores[category]["score"] += result["score"]
                 category_scores[category]["max"] += result["max_score"]
                 category_scores[category]["count"] += 1
+                
+                breakdown = result.get("score_breakdown", {})
+                for k, v in breakdown.items():
+                    category_scores[category]["penalties"][k] += v
 
                 level = test_case["level"]
                 if level not in level_scores:
@@ -210,7 +231,8 @@ class EvaluatorService:
                         "score": round(scores["score"], 2),
                         "max": scores["max"],
                         "percentage": round((scores["score"] / scores["max"] * 100) if scores["max"] > 0 else 0, 2),
-                        "count": scores["count"]
+                        "count": scores["count"],
+                        "penalties": {k: round(v, 2) for k, v in scores["penalties"].items()}
                     }
                     for cat, scores in category_scores.items()
                 },
@@ -242,10 +264,17 @@ class EvaluatorService:
 
                 category = test_case["category"]
                 if category not in category_scores:
-                    category_scores[category] = {"score": 0, "max": 0, "count": 0}
+                    category_scores[category] = {
+                        "score": 0, "max": 0, "count": 0,
+                        "penalties": {"required": 0, "forbidden": 0, "syntax": 0, "jac_check": 0}
+                    }
                 category_scores[category]["score"] += result["score"]
                 category_scores[category]["max"] += result["max_score"]
                 category_scores[category]["count"] += 1
+                
+                breakdown = result.get("score_breakdown", {})
+                for k, v in breakdown.items():
+                    category_scores[category]["penalties"][k] += v
 
                 level = test_case["level"]
                 if level not in level_scores:
@@ -265,6 +294,7 @@ class EvaluatorService:
                     "max": scores["max"],
                     "percentage": round((scores["score"] / scores["max"] * 100) if scores["max"] > 0 else 0, 2),
                     "count": scores["count"],
+                    "penalties": {k: round(v, 2) for k, v in scores["penalties"].items()},
                     "tests": [r for r in results if r["category"] == cat]
                 }
                 for cat, scores in category_scores.items()

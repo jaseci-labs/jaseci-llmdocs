@@ -20,7 +20,6 @@ def _format_result(result, collection=None):
             'model': result['model'],
             'model_full': result['model'],
             'variant': result['variant'],
-            'test_suite': result['test_suite'],
             'total_tests': str(result.get('total_tests', 0)),
             'batch_size': result.get('batch_size'),
             'num_batches': result.get('num_batches')
@@ -50,7 +49,6 @@ def register_routes(app, socketio=None, running_benchmarks=None):
                     'run_id': r.run_id,
                     'model': r.model,
                     'variant': r.variant,
-                    'test_suite': r.test_suite,
                     'total_tests': r.total_tests,
                     'batch_size': r.batch_size,
                     'num_batches': r.num_batches,
@@ -151,7 +149,6 @@ def register_routes(app, socketio=None, running_benchmarks=None):
                     'run_id': result.get('run_id'),
                     'model': result.get('model'),
                     'variant': result.get('variant'),
-                    'test_suite': result.get('test_suite'),
                     'batch_size': result.get('batch_size'),
                     'num_batches': result.get('num_batches'),
                     'total_tests': result.get('total_tests'),
@@ -168,7 +165,7 @@ def register_routes(app, socketio=None, running_benchmarks=None):
 
         output = io.StringIO()
         fieldnames = [
-            'collection', 'run_id', 'model', 'variant', 'test_suite',
+            'collection', 'run_id', 'model', 'variant',
             'batch_size', 'num_batches', 'total_tests',
             'total_score', 'max_score', 'percentage',
             'temperature', 'max_tokens', 'created_at'

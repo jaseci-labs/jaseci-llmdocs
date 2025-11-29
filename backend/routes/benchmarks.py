@@ -19,7 +19,6 @@ def register_routes(app, socketio, running_benchmarks):
         variant = data.get('variant')
         temperature = data.get('temperature', 0.1)
         max_tokens = data.get('max_tokens', 16000)
-        test_limit = data.get('test_limit')
         batch_size = data.get('batch_size', 45)
 
         if not model or not variant:
@@ -35,7 +34,7 @@ def register_routes(app, socketio, running_benchmarks):
                 llm_service = LLMService()
                 BenchmarkRunService.create(
                     run_id=run_id, model=model, model_id=model, variant=variant,
-                    temperature=temperature, max_tokens=max_tokens, test_limit=test_limit, concurrency=1
+                    temperature=temperature, max_tokens=max_tokens, concurrency=1
                 )
 
                 def progress_callback(completed, total, message, batch_num=None, num_batches=None, failed=0, batch_statuses=None):
@@ -62,7 +61,7 @@ def register_routes(app, socketio, running_benchmarks):
 
                 result = llm_service.run_benchmark_concurrent(
                     model, variant, temperature, max_tokens,
-                    test_limit=test_limit, batch_size=batch_size, progress_callback=progress_callback
+                    batch_size=batch_size, progress_callback=progress_callback
                 )
 
                 # Trigger evaluation immediately
@@ -185,8 +184,6 @@ def register_routes(app, socketio, running_benchmarks):
                 'variant': result.get('variant'),
                 'temperature': result.get('temperature'),
                 'max_tokens': result.get('max_tokens'),
-                'test_limit': result.get('test_limit'),
-                'test_suite': result.get('test_suite'),
                 'total_tests': result.get('total_tests', 0),
                 'batch_size': result.get('batch_size'),
                 'num_batches': result.get('num_batches'),
@@ -213,8 +210,6 @@ def register_routes(app, socketio, running_benchmarks):
             'variant': result.get('variant'),
             'temperature': result.get('temperature'),
             'max_tokens': result.get('max_tokens'),
-            'test_limit': result.get('test_limit'),
-            'test_suite': result.get('test_suite'),
             'total_tests': result.get('total_tests', 0),
             'batch_size': result.get('batch_size'),
             'num_batches': result.get('num_batches'),
@@ -241,7 +236,6 @@ def register_routes(app, socketio, running_benchmarks):
         temperature = result.get('temperature', 0.1)
         max_tokens = result.get('max_tokens', 16000)
         batch_size = result.get('batch_size', 45)
-        test_limit = result.get('test_limit')
 
         rerun_id = f"rerun_{run_id}_{batch_num}"
 
@@ -263,7 +257,7 @@ def register_routes(app, socketio, running_benchmarks):
                 llm_service = LLMService()
                 batch_responses = llm_service.rerun_single_batch(
                     model, variant, temperature, max_tokens,
-                    batch_num=batch_num, batch_size=batch_size, test_limit=test_limit
+                    batch_num=batch_num, batch_size=batch_size
                 )
 
                 current_responses = result.get('responses', {})

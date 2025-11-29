@@ -31,8 +31,6 @@ class BenchmarkResultService:
         variant: str,
         temperature: float,
         max_tokens: int,
-        test_limit: Optional[int],
-        test_suite: str,
         total_tests: int,
         responses: Dict[str, str],
         batch_size: Optional[int] = None,
@@ -48,8 +46,7 @@ class BenchmarkResultService:
                 variant=variant,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                test_limit=test_limit,
-                test_suite=test_suite,
+                test_limit=None,
                 total_tests=total_tests,
                 batch_size=batch_size,
                 num_batches=num_batches,
@@ -116,8 +113,6 @@ class BenchmarkResultService:
                     'variant': result.variant,
                     'temperature': result.temperature,
                     'max_tokens': result.max_tokens,
-                    'test_limit': result.test_limit,
-                    'test_suite': result.test_suite,
                     'total_tests': result.total_tests,
                     'batch_size': result.batch_size,
                     'num_batches': result.num_batches,
@@ -148,7 +143,6 @@ class BenchmarkResultService:
                     'run_id': r.run_id,
                     'model': r.model,
                     'variant': r.variant,
-                    'test_suite': r.test_suite,
                     'total_tests': r.total_tests,
                     'total_score': r.total_score,
                     'max_score': r.max_score,
@@ -248,7 +242,6 @@ class BenchmarkResultService:
                     'run_id': r.run_id,
                     'model': r.model,
                     'variant': r.variant,
-                    'test_suite': r.test_suite,
                     'total_tests': r.total_tests,
                     'batch_size': r.batch_size,
                     'num_batches': r.num_batches,
@@ -289,7 +282,6 @@ class BenchmarkRunService:
         variant: str,
         temperature: float,
         max_tokens: int,
-    test_limit: Optional[int],
         concurrency: int
     ) -> int:
         """Create new benchmark run"""
@@ -301,7 +293,7 @@ class BenchmarkRunService:
                 variant=variant,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                test_limit=test_limit,
+                test_limit=None,
                 concurrency=concurrency,
                 status='running',
                 started_at=time.time()
@@ -504,7 +496,6 @@ class CollectionService:
                         'model': first_result.model,
                         'model_full': first_result.model,
                         'variant': first_result.variant,
-                        'test_suite': first_result.test_suite,
                         'total_tests': str(first_result.total_tests),
                         'batch_size': first_result.batch_size
                     }

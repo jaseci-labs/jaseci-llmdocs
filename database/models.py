@@ -59,7 +59,6 @@ class BenchmarkResult(Base):
     temperature = Column(Float, nullable=False)
     max_tokens = Column(Integer, nullable=False)
     test_limit = Column(Integer, nullable=True)
-    test_suite = Column(String(32), nullable=False)  # 'small' or 'full'
 
     # Metadata
     total_tests = Column(Integer, nullable=False)
