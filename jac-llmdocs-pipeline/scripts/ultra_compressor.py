@@ -109,7 +109,11 @@ class UltraCompressor:
             # Use the condenser's OpenRouter API
             formatted_content = self.condenser.condense_with_openrouter(content, prompt)
 
-            formatted_tokens = self._estimate_tokens(formatted_content)
+            # Apply aggressive regex formatting and final cleanup after LLM processing
+            processed_content = self.regex_format(formatted_content)
+            processed_content = self.final_cleanup(processed_content)
+
+            formatted_tokens = self._estimate_tokens(processed_content)
             compression_ratio = 1 - (formatted_tokens / original_tokens) if original_tokens > 0 else 0
 
             print(f"  Output: {formatted_tokens:,} tokens ({compression_ratio:.1%} reduction)")
@@ -118,7 +122,7 @@ class UltraCompressor:
                 original_tokens=original_tokens,
                 compressed_tokens=formatted_tokens,
                 compression_ratio=compression_ratio,
-                content=formatted_content,
+                content=processed_content,
                 success=True
             )
 

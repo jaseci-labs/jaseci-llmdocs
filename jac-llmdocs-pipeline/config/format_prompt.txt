@@ -1,26 +1,14 @@
 You are formatting technical documentation into ultra-compact reference format.
 
-CRITICAL: Your ONLY job is FORMATTING and COMPACTING TEXT - DO NOT REMOVE ANY INFORMATION.
+CRITICAL: Your ONLY job is to provide RAW, UNFORMATTED TEXT. DO NOT apply any Markdown or special formatting. An external formatter will process this text.
 
-FORMATTING RULES:
-1. PRESERVE ALL INFORMATION - Every detail, syntax, example, parameter must remain
-2. ELIMINATE WHITESPACE - Remove unnecessary blank lines and spaces
-3. PACK TEXT TIGHTLY - Use dense formatting with minimal line breaks
-4. USE ABBREVIATIONS - Standardize common terms (n=name, p=param, t=type, v=value, r=return)
-5. COMBINE RELATED CONTENT - Put related concepts on same line separated by periods or semicolons
-6. INLINE CODE EXAMPLES - Show small examples directly in flow
-7. CONSOLIDATE SECTIONS - Merge related sections to reduce headers
-8. NO DELETION - If uncertain whether to remove something, KEEP IT
-
-FORMATTING TECHNIQUES:
-- Use `:` for topic headers: "Functions:", "Types:", "Walkers:"
-- Use `;` to separate related items: "has a:t; def m(){...}; obj N{}"
-- Use `.` to separate major concepts: "Syntax: ;. Blocks: {}. Strings: f\"text {var}\"."
-- Abbreviate consistently: n=name, p=parameter, t=type, v=value, r=return, a=attribute, m=method
-- Inline small examples: "Loop: for i in items {...}. Range: for i=0 to i<10 by i+=1."
-- List compactly: "Types: int, str, float, bool, list[T], dict[K,V]"
-- Show all variants: "Edges: ++>, <++>, +>:E:+>, <+:E:<+"
-- Preserve ALL flags/options: "serve file.jac [--host IP] [--port PORT] [--reload]"
+RULES:
+1.  **PRESERVE ALL INFORMATION:** Every detail, syntax, example, parameter must remain.
+2.  **NO MARKDOWN:** Do NOT use headers, lists, bolding, italics, or code blocks. Output plain text only.
+3.  **CONDENSE MEANING:** Condense the meaning into the fewest possible words, keeping the technical accuracy.
+4.  **ELIMINATE REDUNDANCY:** Remove all repeated information.
+5.  **NO FLUFF:** Remove conversational text, introductions, conclusions. Get straight to the facts.
+6.  **ONE CONSECUTIVE STREAM OF TEXT:** Output a single, continuous stream of text, with only paragraph breaks (single blank lines) where absolutely necessary for readability of content *before* minification.
 
 EXAMPLE INPUT:
 ```
@@ -34,42 +22,19 @@ Functions can have parameters with type annotations:
 - name: parameter name
 - type: parameter type
 - default: optional default value
-
-## Return Types
-
-Return type is specified after arrow `->`.
-
-## Examples
-
-Basic function:
-```jac
-def greet(name: str) -> str {
-    return f"Hello {name}";
-}
-```
-
-Async function:
-```jac
-async def fetch() -> dict {
-    return await api_call();
-}
-```
 ```
 
 EXAMPLE OUTPUT:
 ```
-Functions: def n(p:t=v)->r{...}. Params: name, type, default. Returns: ->r. async def. Examples: def greet(name:str)->str{return f"Hello {name}";}. async def fetch()->dict{return await api_call();}.
+Functions are defined using the def keyword. Parameters can have type annotations: name, type, default.
 ```
 
 IMPORTANT:
-- DO NOT summarize or omit details
-- DO NOT remove examples or code
-- DO NOT skip syntax variants
-- DO NOT eliminate edge cases or warnings
-- ONLY compress formatting, NOT content
-- When in doubt, include it
+- Output ONLY the raw, unformatted content.
+- DO NOT summarize or omit details.
+- DO NOT add any markdown formatting.
 
-Now format the following documentation. Output ONLY the formatted text:
+Now format the following documentation. Output ONLY the raw, unformatted text:
 
 ---
 {content}

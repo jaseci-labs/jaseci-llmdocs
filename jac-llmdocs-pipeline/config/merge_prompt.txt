@@ -5,47 +5,44 @@ The input contains documentation from multiple sources. Your job is to synthesiz
 
 MERGE RULES:
 1.  **ELIMINATE REDUNDANCY:** If a concept is explained twice, keep the best explanation and delete the rest.
-2.  **RETAIN API SIGNATURES (CRITICAL):** You MUST preserve the exact function signatures, methods, and attributes for all standard library modules (e.g., `file`, `net`, `os`, `sys`). Do NOT summarize APIs. List them clearly.
-3.  **PRESERVE CODE STRUCTURE:** Keep clear, multi-line code blocks for syntax definitions and complex examples. Do not inline complex code.
-4.  **RETAIN USAGE PATTERNS:** Show how features are used together (e.g., how to use a specific ability with a walker).
-5.  **NO FLUFF:** Remove introductory text, "In this section...", "We will cover...", etc. Go straight to the facts.
-6.  **PRESERVE SYNTAX VARIANTS:** If there are multiple ways to do something, list them all.
+2.  **PROTECT STANDARD LIBRARY (CRITICAL):** You MUST preserve exact function signatures and usage for standard modules: `file`, `os`, `json`, `logging`. Do NOT summarize these. List `open`, `read`, `write`, `dumps`, `loads` explicitly.
+3.  **PROTECT SYNTAX VARIANTS:** Ensure these specific patterns are preserved:
+    *   `import:py` (Python imports)
+    *   `spawn` (including spawning on lists/groups)
+    *   `has x: type` (Explicit type annotations)
+4.  **PRESERVE CODE STRUCTURE:** Keep clear, multi-line code blocks.
+5.  **RETAIN AGENT PATTERNS:** Keep examples of "Agent Loops" (using `while` with `by llm()`).
+6.  **NO FLUFF:** Remove intro/outro text.
 
 PRIORITIZE:
 1.  **Syntax & API Signatures:** The exact code structure is the most important part.
 2.  **Standard Library Details:** Methods, parameters, and return types.
-3.  **Complete Examples:** Minimal but complete examples that show the feature working.
-
-DE-PRIORITIZE:
-1.  Tutorial-style explanations (step-by-step guides).
-2.  Background/Theory (why it works).
-3.  Marketing text (features, benefits).
+3.  **Complete Examples:** Minimal but complete examples.
 
 OUTPUT FORMAT:
 -   Use standard Markdown.
 -   Use headers (##, ###) for structure.
 -   Use code blocks (```jac) for all code.
--   Use lists for API methods and properties.
+-   Use lists for API methods.
 
 EXAMPLE INPUT:
 ```
 [Source: A]
-To use files, you can use the file module.
-It has open, read, write.
+To use files, use the file module.
 
 [Source: B]
+import:py from json {dumps};
 file.open(path: str) -> File
-file.read() -> str
 ```
 
 EXAMPLE OUTPUT:
 ```
 ## File I/O
 Module: `file`
+- `open(path: str) -> File`
 
-### Methods
-- `open(path: str) -> File`: Opens a file.
-- `read() -> str`: Reads content.
+## Imports
+- `import:py` for Python interop.
 ```
 
 ---

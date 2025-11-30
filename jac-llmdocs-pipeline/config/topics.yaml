@@ -340,10 +340,166 @@ topics:
       - "migration"
       - "upgrade"
 
-  entry_points:
-    name: "Entry Points"
-    keywords:
-      - "entry"
-      - "with entry"
-      - "main"
-      - "start"
+    entry_points:
+
+      name: "Entry Points"
+
+      keywords:
+
+        - "entry"
+
+        - "with entry"
+
+        - "main"
+
+        - "start"
+
+  
+
+    file_io:
+
+      name: "File I/O"
+
+      keywords:
+
+        - "file"
+
+        - "read"
+
+        - "write"
+
+        - "open"
+
+        - "I/O"
+
+        - "path"
+
+        - "directory"
+
+        - "json"
+
+        - "serialization"
+
+        - "dump"
+
+        - "load"
+
+  
+
+    persistence:
+
+      name: "Persistence and Storage"
+
+      keywords:
+
+        - "persistence"
+
+        - "database"
+
+        - "storage"
+
+        - "save"
+
+        - "load"
+
+        - "state"
+
+        - "graph state"
+
+        - "snapshot"
+
+  
+
+    observability:
+
+      name: "Observability and Logging"
+
+      keywords:
+
+        - "observability"
+
+        - "monitoring"
+
+        - "metrics"
+
+        - "audit"
+
+        - "telemetry"
+
+        - "log"
+
+        - "logging"
+
+        - "logger"
+
+        - "trace"
+
+  
+
+    resilience:
+
+      name: "Resilience and Recovery"
+
+      keywords:
+
+        - "resilience"
+
+        - "retry"
+
+        - "fallback"
+
+        - "circuit breaker"
+
+        - "error recovery"
+
+        - "fault tolerance"
+
+  
+
+    std_library:
+
+      name: "Standard Library"
+
+      keywords:
+
+        - "built-in"
+
+        - "standard library"
+
+        - "std"
+
+        - "print"
+
+        - "input"
+
+        - "len"
+
+        - "range"
+
+        - "format"
+
+        - "utils"
+
+  
+
+    spawning:
+
+      name: "Spawning and Concurrency"
+
+      keywords:
+
+        - "spawn"
+
+        - "concurrency"
+
+        - "parallel"
+
+        - "threading"
+
+        - "background"
+
+        - "async"
+
+        - "await"
+
+  

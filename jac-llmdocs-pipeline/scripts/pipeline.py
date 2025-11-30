@@ -10,6 +10,8 @@ Stage 3: Format and combine all topics into final compact reference
 import os
 import sys
 import yaml
+import shutil
+import glob
 from pathlib import Path
 from datetime import datetime
 
@@ -29,6 +31,7 @@ class TopicBasedPipeline:
     2. Topic Merge: Within each topic, merge all related docs
     3. Hierarchical Merge: Combine all topics into one unified document
     4. Format: Final cleanup and formatting
+    5. Release: Version and publish the final document
     """
 
     def __init__(self, config_path: str):
@@ -49,6 +52,9 @@ class TopicBasedPipeline:
         self.source_dir = Path(self.config['source_dir'])
         self.output_dir = Path(self.config.get('ultra_compression', {}).get('output_dir', 'output/4_final'))
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Project root (assuming scripts/pipeline.py -> scripts/ -> pipeline_root/)
+        self.project_root = Path(__file__).parent.parent.parent
 
     def run_stage_1_extraction(self):
         """Stage 1: Extract topic-specific content."""
@@ -129,8 +135,52 @@ class TopicBasedPipeline:
 
         return True
 
+    def run_stage_5_release(self):
+        """Stage 5: Publish to release directory."""
+        print("\n" + "=" * 80)
+        print("STAGE 5: RELEASE")
+        print("=" * 80)
+
+        release_dir = self.project_root / "release" / "0.4"
+        release_dir.mkdir(parents=True, exist_ok=True)
+        
+        final_output = self.config.get('ultra_compression', {}).get('output_file', 'jac_docs_final.txt')
+        source_file = self.output_dir / final_output
+        
+        if not source_file.exists():
+            print(f"Error: Source file for release not found: {source_file}")
+            return False
+
+        # Find next version number
+        existing_files = glob.glob(str(release_dir / "jac_docs_final*.txt"))
+        max_version = 0
+        for f in existing_files:
+            name = Path(f).stem
+            # Extract number from "jac_docs_finalN" or "jac_docs_final"
+            suffix = name.replace("jac_docs_final", "")
+            if suffix.isdigit():
+                ver = int(suffix)
+                if ver > max_version:
+                    max_version = ver
+            elif suffix == "":
+                # "jac_docs_final.txt" counts as version 1 (effectively)
+                if max_version < 1:
+                    max_version = 1
+        
+        next_version = max_version + 1
+        dest_filename = f"jac_docs_final{next_version}.txt"
+        dest_path = release_dir / dest_filename
+        
+        try:
+            shutil.copy(source_file, dest_path)
+            print(f"Successfully released to: {dest_path}")
+            return True
+        except Exception as e:
+            print(f"Release failed: {e}")
+            return False
+
     def run_full_pipeline(self):
-        """Run all four stages in sequence."""
+        """Run all five stages in sequence."""
         start_time = datetime.now()
 
         print("\n" + "=" * 80)
@@ -143,6 +193,7 @@ class TopicBasedPipeline:
         if not self.run_stage_2_merge(): return False
         if not self.run_stage_3_hierarchical_merge(): return False
         if not self.run_stage_4_format(): return False
+        if not self.run_stage_5_release(): return False
 
         end_time = datetime.now()
         print(f"\nPipeline Finished: {end_time - start_time}")
@@ -176,8 +227,10 @@ def main():
             pipeline.run_stage_3_hierarchical_merge()
         elif stage_to_run == 4:
             pipeline.run_stage_4_format()
+        elif stage_to_run == 5:
+            pipeline.run_stage_5_release()
         else:
-            print("Invalid stage. Use 1-4.")
+            print("Invalid stage. Use 1-5.")
             
     except KeyboardInterrupt:
         print("\nInterrupted.")
