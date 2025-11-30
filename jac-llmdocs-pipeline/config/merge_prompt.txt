@@ -1,51 +1,51 @@
-You are an expert technical writer creating an ULTRA-COMPACT reference manual.
+You are an expert technical writer creating a CONCISE TECHNICAL REFERENCE manual.
 
-GOAL: EXTREME CONDENSATION & REDUNDANCY REMOVAL.
-The input contains repetitive documentation from multiple sources. Your job is to synthesize this into a SINGLE, DENSE, NON-REPETITIVE definition.
+GOAL: CREATE A DENSE BUT READABLE REFERENCE.
+The input contains documentation from multiple sources. Your job is to synthesize this into a SINGLE, COHESIVE reference guide.
 
-COMPRESSION RULES:
-1.  **REMOVE ALL REDUNDANCY:** If a concept is explained twice, keep the best explanation and delete the rest. Never repeat information.
-2.  **MERGE EXAMPLES:** Do not list 5 examples of the same thing. Create ONE comprehensive example that demonstrates multiple features if possible.
-3.  **DENSE SYNTAX:** Use standard notation (e.g., `func(arg: type) -> ret`) instead of wordy descriptions.
-4.  **NO FLUFF:** Remove introductory text, "In this section...", "We will cover...", etc. Go straight to the facts.
-5.  **AGGRESSIVE MERGING:** Combine related points. Instead of 3 bullet points, write one concise sentence.
+MERGE RULES:
+1.  **ELIMINATE REDUNDANCY:** If a concept is explained twice, keep the best explanation and delete the rest.
+2.  **RETAIN API SIGNATURES (CRITICAL):** You MUST preserve the exact function signatures, methods, and attributes for all standard library modules (e.g., `file`, `net`, `os`, `sys`). Do NOT summarize APIs. List them clearly.
+3.  **PRESERVE CODE STRUCTURE:** Keep clear, multi-line code blocks for syntax definitions and complex examples. Do not inline complex code.
+4.  **RETAIN USAGE PATTERNS:** Show how features are used together (e.g., how to use a specific ability with a walker).
+5.  **NO FLUFF:** Remove introductory text, "In this section...", "We will cover...", etc. Go straight to the facts.
+6.  **PRESERVE SYNTAX VARIANTS:** If there are multiple ways to do something, list them all.
 
 PRIORITIZE:
-1.  **Syntax & API Signatures:** The exact code structure is most important.
-2.  **Critical Constraints:** What is allowed/forbidden.
-3.  **Minimal Examples:** Only enough to show usage.
+1.  **Syntax & API Signatures:** The exact code structure is the most important part.
+2.  **Standard Library Details:** Methods, parameters, and return types.
+3.  **Complete Examples:** Minimal but complete examples that show the feature working.
 
 DE-PRIORITIZE:
-1.  Tutorial-style explanations (how-to).
+1.  Tutorial-style explanations (step-by-step guides).
 2.  Background/Theory (why it works).
 3.  Marketing text (features, benefits).
 
 OUTPUT FORMAT:
--   Use Markdown.
--   Use code blocks for syntax and examples.
--   Use concise bullet points for features/rules.
+-   Use standard Markdown.
+-   Use headers (##, ###) for structure.
+-   Use code blocks (```jac) for all code.
+-   Use lists for API methods and properties.
 
 EXAMPLE INPUT:
 ```
 [Source: A]
-To declare a variable, use the 'has' keyword. It requires a type.
-Example: has x: int = 5;
+To use files, you can use the file module.
+It has open, read, write.
 
 [Source: B]
-Variables are defined with 'has'.
-has name: str = "Jaseci";
-You can also use access modifiers like :priv.
+file.open(path: str) -> File
+file.read() -> str
 ```
 
 EXAMPLE OUTPUT:
 ```
-**Variable Declaration**
-Syntax: `has <name>: <type> = <value> by <access_modifier>;`
-Modifiers: `:pub` (default), `:priv`, `:protect`.
-Example:
-```jac
-has x: int = 5;
-has name: str = "Jaseci" by :priv;
+## File I/O
+Module: `file`
+
+### Methods
+- `open(path: str) -> File`: Opens a file.
+- `read() -> str`: Reads content.
 ```
 
 ---
@@ -53,4 +53,4 @@ INPUT CONTENT:
 {content}
 ---
 
-Output ONLY the condensed reference documentation.
+Output ONLY the merged reference documentation.
