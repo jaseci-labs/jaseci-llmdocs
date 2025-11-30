@@ -1,11 +1,9 @@
-# JAC LLM Documentation Pipeline Configuration
-# Topic-Based Architecture: Extract → Merge → Format
-
-# Prompt files for each stage (edit these to tune pipeline behavior)
+# Prompt files for each stage
 prompts:
-  extraction: "config/extraction_prompt.txt"   # Stage 1: Extract topic-specific content
-  merge: "config/merge_prompt.txt"              # Stage 2: Merge within each topic
-  format: "config/format_prompt.txt"            # Stage 3: Final compact formatting
+  extraction: "config/stage1_extract_prompt.txt"   # Stage 1
+  merge: "config/stage2_merge_prompt.txt"          # Stage 2
+  reduce: "config/stage3_reduce_prompt.txt"        # Stage 3
+  compress: "config/stage4_compress_prompt.txt"    # Stage 4
 
 # Source documentation directory (can be absolute or relative to pipeline root)
 source_dir: "/home/kevinjin/jaseci-llmdocs/docs-new"
@@ -13,14 +11,13 @@ source_dir: "/home/kevinjin/jaseci-llmdocs/docs-new"
 # LLM API Configuration
 llm:
   provider: "openrouter"
-  model: "google/gemini-2.5-flash"  # OpenRouter model identifier
+  model: "google/gemini-2.5-flash"
   api_key_env: "OPENROUTER_API_KEY"
   max_tokens: 4096
   temperature: 0.0
 
-  # Retry configuration for API errors
-  max_retries: 3  # Number of retry attempts for 500/502/503/504/429 errors
-  retry_delay: 2  # Initial delay in seconds (doubles with each retry)
+  max_retries: 3
+  retry_delay: 2  # Initial delay in seconds
 
 # Processing options
 processing:
@@ -53,9 +50,9 @@ extraction:
   output_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/1_extracted"
   
   # Optional: Override LLM for this stage
-  llm:
-    model: "google/gemini-2.5-flash"
-    temperature: 0.1
+  # llm:
+  #   model: "google/gemini-2.5-flash"
+  #   temperature: 0.1
 
 # Stage 2: Topic Merging
 merge:
@@ -66,9 +63,9 @@ merge:
   output_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/2_merged"
 
   # Optional: Override LLM for this stage
-  llm:
-    model: "anthropic/claude-sonnet-4.5"
-    temperature: 0.1
+  # llm:
+  #   model: "anthropic/claude-sonnet-4.5"
+  #   temperature: 0.1
 
 # Stage 3: Hierarchical Merge
 hierarchical_merge:
@@ -79,9 +76,9 @@ hierarchical_merge:
   ratio: 2
 
   # Optional: Override LLM for this stage
-  llm:
-    model: "openai/gpt-5.1"
-    temperature: 0.1
+  # llm:
+  #   model: "openai/gpt-5.1"
+    # temperature: 0.1
 
 # Stage 4: Final Formatting and Combining
 ultra_compression:
@@ -92,6 +89,6 @@ ultra_compression:
   output_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/4_final"
 
   # Optional: Override LLM for this stage
-  llm:
-    model: "google/gemini-3-pro-preview"
-    temperature: 0.0
+  # llm:
+  #   model: "google/gemini-3-pro-preview"
+  #   temperature: 0.0
