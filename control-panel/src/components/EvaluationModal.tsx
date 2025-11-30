@@ -124,12 +124,14 @@ export default function EvaluationModal({ isOpen, onClose, results }: Props) {
 			? (totalStats.totalScore / totalStats.totalMax) * 100
 			: 0;
 
-	const stdDev = (() => {
+	const coeffOfVariation = (() => {
 		if (percentages.length < 2) return 0;
 		const mean = percentages.reduce((a, b) => a + b, 0) / percentages.length;
-		const squaredDiffs = percentages.map(p => Math.pow(p - mean, 2));
-		const variance = squaredDiffs.reduce((a, b) => a + b, 0) / percentages.length;
-		return Math.sqrt(variance);
+		const squaredDiffs = percentages.map((p) => Math.pow(p - mean, 2));
+		const variance =
+			squaredDiffs.reduce((a, b) => a + b, 0) / percentages.length;
+		const stdDev = Math.sqrt(variance);
+		return (stdDev / mean) * 100;
 	})();
 
 	// Aggregate category statistics across all files
@@ -376,9 +378,9 @@ export default function EvaluationModal({ isOpen, onClose, results }: Props) {
 											{totalStats.totalScore.toFixed(1)} /{" "}
 											{totalStats.totalMax}
 										</div>
-										{stdDev > 0 && (
+										{coeffOfVariation > 0 && (
 											<div className="text-gray-500 text-sm mt-1">
-												SD: {stdDev.toFixed(2)}
+												CV: {coeffOfVariation.toFixed(2)}%
 											</div>
 										)}
 									</div>
