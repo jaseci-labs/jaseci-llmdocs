@@ -77,6 +77,8 @@ class HierarchicalMerger:
         """
         Execute the hierarchical merge process.
         """
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
         print(f"\nStage 3: Hierarchical Merge (Ratio {merge_ratio}:1)")
         
         current_files = sorted(list(self.input_dir.glob("*.txt")))

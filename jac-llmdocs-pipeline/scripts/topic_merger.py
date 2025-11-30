@@ -192,8 +192,14 @@ class TopicMerger:
         if not new_chunks:
             return ""
             
-        # Join results and recurse
+        # Join results
         merged_content = "\n\n".join(new_chunks)
+        
+        # Check for stagnation (if compression is minimal)
+        if len(merged_content) > len(content) * 0.9 and len(content) > 20000:
+            print(f"  Topic '{topic_name}' stagnation detected (size {len(merged_content)} vs {len(content)}). Stopping recursion.")
+            return merged_content
+
         return self.recursive_merge(merged_content, topic_name)
 
     def process_topic(self, topic_id: str) -> Dict:
@@ -282,6 +288,8 @@ class TopicMerger:
         Returns:
             Dict with merge statistics
         """
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
         print(f"\nStage 2: Topic Merging")
         print(f"Input: {self.input_dir}")
         print(f"Output: {self.output_dir}")

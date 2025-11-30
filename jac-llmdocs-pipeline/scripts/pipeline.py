@@ -109,6 +109,8 @@ class TopicBasedPipeline:
         print("\n" + "=" * 80)
         print("STAGE 4: FINAL FORMATTING")
         print("=" * 80)
+        
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Input comes from Stage 3 output
         input_file = Path(self.config.get('hierarchical_merge', {}).get('output_dir', 'output/3_hierarchical')) / "unified_doc.txt"
@@ -186,6 +188,16 @@ class TopicBasedPipeline:
         print("\n" + "=" * 80)
         print("JAC DOCUMENTATION PIPELINE")
         print("=" * 80)
+        
+        # Clean up previous output
+        output_root = self.project_root / "jac-llmdocs-pipeline" / "output"
+        if output_root.exists():
+            print(f"Cleaning up previous output directory: {output_root}")
+            try:
+                shutil.rmtree(output_root)
+            except Exception as e:
+                print(f"Warning: Failed to clean output directory: {e}")
+
         print(f"Source: {self.source_dir}")
         print(f"Output: {self.output_dir}")
 

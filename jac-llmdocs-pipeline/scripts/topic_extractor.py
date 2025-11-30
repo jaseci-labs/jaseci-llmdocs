@@ -46,6 +46,7 @@ class TopicExtractor:
 
     def initialize_files(self):
         """Initialize/clear topic output files with headers."""
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         for topic_id, topic_file in self.topic_files.items():
             # Clear existing file
             with open(topic_file, 'w', encoding='utf-8') as f:
