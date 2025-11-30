@@ -439,6 +439,19 @@ class DocumentationService:
                 for v in variants
             ]
 
+    @staticmethod
+    def delete_variant(variant_name: str) -> bool:
+        """Delete (deactivate) a documentation variant"""
+        with get_db() as session:
+            variant = session.query(DocumentationVariant).filter_by(
+                variant_name=variant_name
+            ).first()
+
+            if variant:
+                variant.is_active = False
+                return True
+            return False
+
 
 class CollectionService:
     """Service for managing collections"""

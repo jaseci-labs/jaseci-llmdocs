@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import BenchmarkView from '@/views/BenchmarkView'
 import FileManager from '@/views/FileManager'
 import StatsPanel from '@/views/StatsPanel'
+import VariantsView from '@/views/VariantsView'
 
 const API_BASE = 'http://localhost:5050/api'
 
@@ -228,6 +229,21 @@ function AppContent() {
               )}
             </Link>
             <Link
+              to="/variants"
+              className={`px-5 py-2.5 rounded border text-sm transition-all cursor-pointer ${
+                location.pathname === '/variants'
+                  ? 'bg-zinc-800 border-terminal-accent text-terminal-accent'
+                  : 'border-terminal-border text-gray-400 hover:bg-zinc-800 hover:border-gray-600 hover:text-white'
+              }`}
+            >
+              Variants
+              {variants.length > 0 && (
+                <span className="ml-1.5 bg-terminal-accent text-black px-1.5 py-0.5 rounded text-xs font-semibold">
+                  {variants.length}
+                </span>
+              )}
+            </Link>
+            <Link
               to="/statistics"
               className={`px-5 py-2.5 rounded border text-sm transition-all cursor-pointer ${
                 location.pathname === '/statistics'
@@ -235,7 +251,7 @@ function AppContent() {
                   : 'border-terminal-border text-gray-400 hover:bg-zinc-800 hover:border-gray-600 hover:text-white'
               }`}
             >
-              statistics
+              Statistics
             </Link>
           </nav>
         </div>
@@ -269,6 +285,15 @@ function AppContent() {
                     fetchStashes()
                   }}
                   onDelete={deleteFile}
+                />
+              }
+            />
+            <Route
+              path="/variants"
+              element={
+                <VariantsView
+                  variants={variants}
+                  onRefresh={fetchVariants}
                 />
               }
             />

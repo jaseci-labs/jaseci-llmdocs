@@ -1,0 +1,92 @@
+# JAC LLM Documentation Pipeline Configuration
+
+# Source documentation directory (can be absolute or relative to pipeline root)
+source_dir: "/home/kevinjin/jaseci-llmdocs/docs-new"
+
+# Output directory for condensed documentation
+output_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/1_condensed"
+
+# Metrics and logs directory
+metrics_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/metrics"
+
+# LLM API Configuration
+llm:
+  provider: "openrouter"
+  model: "google/gemini-2.5-flash"  # OpenRouter model identifier
+  api_key_env: "OPENROUTER_API_KEY"
+  max_tokens: 4096
+  temperature: 0.0
+
+# Processing options
+processing:
+  # Process files in parallel
+  parallel: true
+  max_workers: 16  # Increased for OpenRouter's high rate limits
+
+  # Process sections within files in parallel
+  parallel_sections: true
+  section_workers: 8
+
+  # Chunk size for large files (lines)
+  chunk_size: 500
+
+  # Skip files matching these patterns
+  skip_patterns:
+    - "*.html"
+    - "*.css"
+    - "*.js"
+    - "index.md"
+    - "README.md"
+
+  # Categories to process (null = all)
+  categories: null
+  # categories: ["learn", "jac_book"]
+
+# Condensation settings
+condensation:
+  # Remove HTML tags and classes
+  strip_html: true
+
+  # Remove pedagogical language
+  remove_fluff: true
+
+  # Preserve code examples
+  preserve_code: true
+
+  # Target compression ratio (informational)
+  target_ratio: 0.3  # 70% reduction
+
+  # Output format
+  output_format: "plain_text"  # plain_text, markdown_minimal
+
+# Validation
+validation:
+  # Check for key concepts preservation
+  verify_concepts: true
+
+  # Minimum acceptable compression ratio
+  min_ratio: 0.10
+
+  # Maximum acceptable compression ratio (allow up to 90% for very small sections)
+  max_ratio: 0.90
+
+# Multi-stage merge configuration
+merge:
+  # Enable multi-stage merge after condensation
+  enabled: true
+
+  # Merge ratio (how many files to combine per group)
+  # e.g., 4 means 4:1 ratio (4 files become 1)
+  ratio: 4
+
+  # Parallel workers for concurrent group processing within each stage
+  max_workers: 16
+
+  # Output directory for merged stages
+  output_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/2_merged"
+
+  # Preserve document structure during merges
+  preserve_structure: true
+
+  # Final output filename
+  final_output: "jac_docs_final.txt"

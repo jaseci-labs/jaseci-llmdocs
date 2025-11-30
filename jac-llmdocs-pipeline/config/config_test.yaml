@@ -1,0 +1,67 @@
+# JAC LLM Documentation Pipeline Configuration - TEST MODE
+
+# Source documentation directory
+source_dir: "/home/kevinjin/jaseci-llmdocs/docs-new"
+
+# Output directory for condensed documentation
+output_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/test_1_condensed"
+
+# Metrics and logs directory
+metrics_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/test_metrics"
+
+# LLM API Configuration
+llm:
+  provider: "openrouter"
+  model: "google/gemini-2.5-flash"  # OpenRouter model identifier
+  api_key_env: "OPENROUTER_API_KEY"
+  max_tokens: 4096
+  temperature: 0.0
+
+# Processing options
+processing:
+  # Process files in parallel
+  parallel: true
+  max_workers: 8
+
+  # Process sections within files in parallel
+  parallel_sections: true
+  section_workers: 4
+
+  # Chunk size for large files (lines)
+  chunk_size: 500
+
+  # Skip files matching these patterns
+  skip_patterns:
+    - "*.html"
+    - "*.css"
+    - "*.js"
+    - "index.md"
+    - "README.md"
+    - "beginners_guide_to_jac.md"  # Skip large file for testing
+    - "chapter_*.md"  # Skip book chapters for testing
+
+  # Test with just playground
+  categories: ["playground"]
+
+# Condensation settings
+condensation:
+  strip_html: true
+  remove_fluff: true
+  preserve_code: true
+  target_ratio: 0.3
+  output_format: "plain_text"
+
+# Validation
+validation:
+  verify_concepts: true
+  min_ratio: 0.10
+  max_ratio: 0.90
+
+# Multi-stage merge configuration
+merge:
+  enabled: true
+  ratio: 2  # Smaller ratio for testing
+  max_workers: 8  # Concurrent group processing
+  output_dir: "/home/kevinjin/jaseci-llmdocs/jac-llmdocs-pipeline/output/test_2_merged"
+  preserve_structure: true
+  final_output: "jac_docs_test_final.txt"

@@ -1,0 +1,467 @@
+# Breaking Changes
+
+## Latest Breaking Changes
+- `mtllm` deprecated, replaced by `byllm`.
+
+## `byLLM` Imports Moved to `byllm.lib`
+- `byLLM` exports moved to `byllm.lib` for lazy loading/faster startup. Direct imports from `byllm` removed.
+```jac
+// Before
+import from byllm { Model }
+glob llm = Model(model_name="gpt-4o-mini", verbose=True);
+
+// After
+import from byllm.lib { Model }
+glob llm = Model(model_name="gpt-4o-mini", verbose=True);
+```
+
+## `dotgen` builtin function is now `printgraph`
+- `printgraph` replaces `dotgen`.
+- Purpose: Output graph data (DOT, JSON, Mermaid).
+```jac
+node N {has val: int;}
+edge E {has val: int = 0;}
+
+with entry {
+    end = root;
+    for i in range(0, 2) {
+        end +>: E : val=i :+> (end := [ N(val=i) for i in range(0, 2) ]);
+    }
+    data = printgraph(node=root);
+    print(data);
+}
+```
+
+## `mtllm.llms` Module Replaced with Unified `mtllm.llm {Model}`
+- `mtllm` uses single `Model` class under `mtllm.llm`.
+- Replaces separate classes (e.g., `Gemini`, `OpenAI`).
+- Aligns with HuggingFace-style naming.
+```jac
+// Before
+import from mtllm.llms { Gemini, OpenAI }
+glob llm1 = Gemini(model_name="gemini-2.0-flash");
+glob llm2 = OpenAI();
+
+// After
+import from mtllm.llm { Model }
+glob llm1 = Model(model_name="gemini/gemini-2.0-flash");
+glob llm2 = Model(model_name="gpt-4o");
+```
+
+## `check` Keyword Removed - Use `assert` in Test Blocks
+- `check` keyword removed.
+- All testing uses `assert` statements.
+- `assert` behavior:
+    - Inside `test` blocks: reports test failures.
+    - Outside `test` blocks: raises `AssertionError`.
+- Replace `check` with `assert` in test blocks.
+- Optional error messages: `assert condition, "Error message";`
+```jac
+glob a: int = 5;
+glob b: int = 2;
+
+test test_equality {
+    assert a == 5;
+    assert b == 2;
+}
+
+test test_comparison {
+    assert a > b;
+    assert a - b == 3;
+}
+
+test test_membership {
+    assert "a" in "abc";
+    assert "d" not in "abc";
+}
+
+test test_function_result {
+    assert almostEqual(a + b, 7);
+}
+```
+
+## Global, Nonlocal Operators Updated to `global`, `nonlocal`
+- `global`, `nonlocal` keywords replace old operator syntax.
+- Aligns with Python's keyword usage.
+```jac
+// Before
+glob x = "Jaclang ";
+def outer_func -> None {
+    :global: x;
+    x = 'Jaclang is ';
+    y = 'Awesome';
+    def inner_func -> tuple[str, str] {
+        :nonlocal: y;
+        y = "Fantastic";
+        return (x, y);
+    }
+    print(x, y);
+    print(inner_func());
+}
+with entry { outer_func(); }
+
+// After
+glob x = "Jaclang ";
+def outer_func -> None {
+    global x;
+    x = 'Jaclang is ';
+    y = 'Awesome';
+    def inner_func -> tuple[str, str] {
+        nonlocal y;
+        y = "Fantastic";
+        return (x, y);
+    }
+    print(x, y);
+    print(inner_func());
+}
+with entry { outer_func(); }
+```
+
+## `ignore` feature is removed
+- `ignore` keyword deprecated.
+- Replicate `ignore` functionality by manually managing visited nodes within the walker.
+```jac
+// Before (Deprecated `ignore`)
+node MyNode { has val:int; }
+walker MyWalker {
+    can func1 with MyNode entry {
+        ignore [here];
+        visit [-->];
+        print(here);
+    }
+}
+with entry {
+    n1 = MyNode(5);
+    n1 ++> MyNode(10) ++> MyNode(15) ++> n1;
+    n1 spawn MyWalker();
+}
+
+// After (Manual `ignore` implementation)
+node MyNode { has val:int; }
+walker MyWalker {
+    has Ignore: list = [];
+    can func1 with MyNode entry {
+        self.Ignore.append(here);
+        visit [i for i in [-->] if i not in self.Ignore];
+        print(here);
+    }
+}
+with entry {
+    n1 = MyNode(5);
+    n1 ++> MyNode(10) ++> MyNode(15) ++> n1;
+    n1 spawn MyWalker();
+}
+```
+
+## `impl` keyword introduced to simplify Implementation
+- Simplifies ability/method implementation for objects, nodes, edges, and types.
+- Replaces complex colon-based syntax.
+```jac
+// Before (v0.7.x)
+:obj:Circle:def:area -> float { return math.pi * self.radius * self.radius; }
+:node:Person:can:greet with Room entry { print("Hello, I am " + self.name); }
+:def:calculate_distance(x: float, y: float) -> float { return math.sqrt(x*x + y*y); }
+
+// After (v0.8.0+)
+impl Circle.area -> float { return math.pi * self.radius * self.radius; }
+impl Person.greet with Room entry { return "Hello, I am " + self.name; }
+impl calculate_distance(x: float, y: float) -> float { return math.sqrt(x*x + y*y); }
+```
+
+## Inheritance base classes specification syntax changed
+- Inheritance syntax updated from colons to parentheses.
+```jac
+// v0.7.x (deprecated)
+obj Vehicle { has wheels: int; }
+obj Car :Vehicle: { has doors: int = 4; }
+node BaseUser { has username: str; }
+node AdminUser :BaseUser: { has is_admin: bool = true; }
+
+// v0.8.0+ (current)
+obj Vehicle { has wheels: int; }
+obj Car(Vehicle) { has doors: int = 4; }
+node BaseUser { has username: str; }
+node AdminUser(BaseUser) { has is_admin: bool = true; }
+```
+
+## Changes to lambda syntax and `lambda` introduced
+- `lambda` keyword replaces `with`, and `:` replaces `can`.
+```jac
+// Before
+with x: int can x;
+
+// After (v0.8.x)
+lambda x: int : x;
+```
+
+## Import `from` syntax updated for clarity
+- `import from` syntax now uses curly braces for clarity.
+```jac
+// Before (v0.7.x)
+import from pygame_mock, color, display;
+import from utils, helper, math_utils, string_formatter;
+
+// After (v0.8.0+)
+import from pygame_mock { color, display };
+import from utils { helper, math_utils, string_formatter };
+```
+
+## `def` keyword introduced
+- `can` keyword: object-spatial abilities only.
+- `def` keyword: traditional Python-like functions and methods.
+```jac
+// Before (v0.7.x and earlier):
+can add(x: int, y: int) -> int { return x + y; }
+node Person {
+    has name; has age;
+    can get_name { return self.name; }
+    can greet with speak_to { return "Hello " + visitor.name + ", my name is " + self.name; }
+    can calculate_birth_year { return 2025 - self.age; }
+}
+
+// After (v0.8.0+):
+def add(x: int, y: int) -> int { return x + y; }
+node Person {
+    has name; has age;
+    def get_name { return self.name; }
+    can greet with speak_to entry { return "Hello " + visitor.name + ", my name is " + self.name; }
+    def calculate_birth_year { return 2025 - self.age; }
+}
+```
+
+## Import statement are auto resolved (no language hints needed)
+- Import statements automatically resolved; explicit language annotations (`:py`, `:jac`) removed.
+- Compiler determines language context based on file extensions and context.
+```jac
+// Before (v0.7.x):
+import:py requests;
+import:jac graph_utils;
+import:py json, os, sys;
+
+// After (v0.8.0+):
+import requests;
+import graph_utils;
+import json, os, sys;
+```
+
+## Data spatial arrow notation updated
+- Typed arrow notation syntax updated:
+    - Old: `-:MyEdge:->`, `+:MyEdge:+>`
+    - New: `->:MyEdge:->`, `+>:MyEdge:+>` (for reference and creation)
+```jac
+friends = [->:Friendship:->];
+alice ->:Friendship:->];
+```
+
+# PyTorch FX Graph Generation
+
+## Common Graph Break Causes
+- Data-dependent conditionals (`if tensor.sum() > 0`)
+- Data-dependent loops (`for i in range(tensor.item())`)
+- Python I/O operations (`print`, file operations)
+- Unsupported Python builtins (`getattr`, `inspect` module)
+- Dynamic attribute access
+- Tensor operations creating dynamic shapes
+
+## PyTorch Codebase References
+- **FX Graph Generation Files:**
+    - `torch/fx/symbolic_trace.py`: Main tracing entry point.
+    - `torch/fx/proxy.py`: Proxy object implementation.
+    - `torch/fx/graph.py`: Graph and Node classes.
+    - `torch/fx/interpreter.py`: Graph execution.
+    - `torch/fx/node.py`: Node representation.
+- **TorchDynamo Files:**
+    - `torch/_dynamo/symbolic_convert.py`: Bytecode analysis.
+    - `torch/_dynamo/guards.py`: Dynamic shape guards.
+    - `torch/_dynamo/eval_frame.py`: Frame evaluation hooks.
+- **Key Functions:**
+    - `torch.fx.symbolic_trace()`: Main entry point.
+    - `torch.fx.Tracer.trace()`: Core tracing logic.
+    - `torch.fx.Proxy.__torch_function__()`: Operation interception.
+    - `torch._dynamo.symbolic_convert.InstructionTranslator`: Bytecode to FX conversion.
+
+## Project Overview
+- **Static FX Graph Generation Pass**: Statically analyzes UniIR of PyTorch models to construct an FX-like graph. Tags and annotates unsupported code (e.g., data-dependent control flow).
+
+## High-Level Compiler Pipeline
+```mermaid
+graph TB
+    subgraph "Frontend"
+        A[Source Code] --> B[Lexer/Parser]
+        B --> C[UniIR AST]
+    end
+
+    subgraph "Analysis Passes"
+        C --> D[SymTabBuildPass]
+        D --> E[DeclImplMatchPass]
+        E --> F[DefUsePass]
+        F --> G[SemDefMatchPass]
+        G --> H[CFGBuildPass]
+    end
+
+    subgraph "Type Checking"
+        H --> I[TypeCheckPass]
+    end
+
+    subgraph "Code Generation"
+        I --> J[PyastGenPass]
+        J --> K[PyJacAstLinkPass]
+        K --> L[PyBytecodeGenPass]
+    end
+
+    L --> M[Python Bytecode]
+```
+
+## FX Graph Structure
+- **Nodes**: Represent operations (`call_function`, `call_method`, `get_attr`, `placeholder`, `output`).
+    - `name` (unique), `op` type, `target`, `args`/`kwargs`.
+    - `placeholder` nodes: graph inputs.
+    - `output` nodes: graph outputs.
+- **Edges**: Implicitly defined by `args`/`kwargs` referencing other nodes.
+- **Graph**: Sequence of topologically ordered nodes. Last node is `output`.
+```python
+import torch
+import torch.fx
+
+def my_function(x, y):
+    return x + y
+
+traced_graph = torch.fx.symbolic_trace(my_function)
+print("Nodes in the graph:")
+for node in traced_graph.graph.nodes:
+    print(f"  Node: {node.name}, Op: {node.op}, Target: {node.target}, Args: {node.args}, Kwargs: {node.kwargs}")
+```
+
+## In UniPass
+```python
+def enter_node(self, node: uni.UniNode) -> None:
+    method_name = f"enter_{pascal_to_snake(type(node).__name__)}"
+    if hasattr(self, method_name):
+        getattr(self, method_name)(node)
+```
+
+## PreDynamoPass
+- **Purpose**: Prepares PyTorch code for dynamic compilation by transforming patterns.
+- **Location**: `jac/jaclang/compiler/passes/main/predynamo_pass.py`
+```python
+# In your pass
+def enter_func_call(self, node: uni.FuncCall) -> None:
+    pass
+
+def exit_if_stmt(self, node: uni.IfStmt) -> None:
+    pass
+```
+- **Transformation Example**: `if condition: x = tensor_a else: x = tensor_b` becomes `x = torch.where(condition, tensor_a, tensor_b)`.
+
+## CFGBuildPass
+- **Purpose**: Builds control flow graphs for program analysis.
+- **Location**: `jac/jaclang/compiler/passes/main/cfg_build_pass.py`
+- **Operations**:
+    - Identifies basic blocks.
+    - Links basic blocks with control flow edges.
+    - Tracks loop structures.
+    - Handles conditional branches.
+- **CFG Structure**:
+```mermaid
+graph TD
+    subgraph "CFG Construction"
+        A[Entry Block] --> B[Basic Block 1]
+        B --> C{If Statement}
+        C -->|True| D[Then Block]
+        C -->|False| E[Else Block]
+        D --> F[Merge Block]
+        E --> F
+        F --> G[Exit Block]
+    end
+```
+- **Basic Block Connections**:
+```python
+class UniCFGNode(UniNode):
+    bb_in: list[UniCFGNode]
+    bb_out: list[UniCFGNode]
+```
+
+## Phase 1: Function Inlining Pass
+- **Purpose**: Inline PyTorch model `forward` method calls for flat representation and analysis.
+- **Original helper function**:
+```python
+def _helper(self, x, scale):
+    return x * scale
+```
+- **After inlining (renamed variables)**:
+```
+__helper_x_0 = a
+__helper_scale_0 = 2.0
+__helper_result_0 = __helper_x_0 * __helper_scale_0
+y = __helper_result_0
+```
+- **Handling Special Cases**:
+    - **Recursive calls**: Not inlined (annotated).
+    - **External functions**: Inlined only if definition available in IR.
+    - **Lambda functions**: Inlined directly.
+    - **Generator functions**: Skipped (cannot inline).
+
+## Overall Design
+```mermaid
+graph TB
+    subgraph "Existing Passes"
+        A[SymTabBuildPass] --> B[DefUsePass]
+        B --> C[CFGBuildPass]
+    end
+
+    subgraph "New Static FX Pass"
+        C --> D[FunctionInlinePass]
+        D --> E[StaticFxGraphBuildPass]
+        E --> F[GraphBreakAnnotationPass]
+    end
+
+    subgraph "Output"
+        F --> G[StaticFxGraph IR]
+        G --> H[Graph Visualization]
+        G --> I[Optimization Passes]
+    end
+```
+
+## Why Inlining is Necessary
+- **PyTorch models**:
+```python
+class MyModel(nn.Module):
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self._helper(x)
+        return self.layer2(x)
+
+    def _helper(self, x):
+        return F.relu(x)
+```
+- **Without inlining**: Incomplete static analysis, missed optimization, fragmented graph.
+- **With inlining**:
+```python
+def forward_inlined(self, x):
+    x = self.layer1.linear(x)
+    x = F.relu(x)
+    x = self.layer2.linear(x)
+    return x
+```
+
+## Implementation Strategy
+- `jac/jaclang/compiler/passes/main/function_inline_pass.py`
+- **Data Structures**:
+```python
+@dataclass
+class InlineCandidate:
+    func_node: uni.Ability
+    call_site: uni.FuncCall
+    caller_node: uni.Ability
+    inline_priority: int
+
+@dataclass
+class InlineContext:
+    variable_
+```
+
+# Jac-Cloud Release Notes
+
+## jac
+## Root Node
+- **Request Context**: Available in

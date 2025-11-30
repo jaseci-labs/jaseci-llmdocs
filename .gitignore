@@ -33,3 +33,15 @@ dist/
 build/
 
 venv/
+# JAC LLM Docs Pipeline - Intermediate outputs
+# jac-llmdocs-pipeline/output/1_condensed/
+# jac-llmdocs-pipeline/output/2_merged/stage_*/
+# jac-llmdocs-pipeline/output/test_1_condensed/
+# jac-llmdocs-pipeline/output/test_2_merged/stage_*/
+jac-llmdocs-pipeline/output/
+
+# Keep final outputs and metrics (negation patterns)
+# !jac-llmdocs-pipeline/output/2_merged/*.txt
+# !jac-llmdocs-pipeline/output/test_2_merged/*.txt
+# !jac-llmdocs-pipeline/output/metrics/
+# !jac-llmdocs-pipeline/output/test_metrics/
