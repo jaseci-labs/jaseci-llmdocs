@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import Editor from '@monaco-editor/react'
 
 function formatBytes(bytes) {
   if (bytes === 0) return '0 B'
@@ -28,6 +29,396 @@ function ProgressBar({ current, total, message }) {
           className="h-full bg-blue-500 transition-all duration-200"
           style={{ width: `${percent}%` }}
         />
+      </div>
+    </div>
+  )
+}
+
+function SourcePanel({ sources, onAdd, onDelete, onToggle, onRefresh }) {
+  const [expanded, setExpanded] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState({
+    id: '',
+    git_url: '',
+    branch: 'main',
+    path: '.',
+    source_type: 'docs',
+  })
+  const [error, setError] = useState(null)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError(null)
+
+    if (!formData.id || !formData.git_url) {
+      setError('ID and Git URL are required')
+      return
+    }
+
+    try {
+      await onAdd(formData)
+      setFormData({
+        id: '',
+        git_url: '',
+        branch: 'main',
+        path: '.',
+        source_type: 'docs',
+      })
+      setShowForm(false)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const sourceTypeLabels = {
+    docs: 'Documentation',
+    jac: 'Jac Code',
+    both: 'Both',
+  }
+
+  const enabledCount = sources.filter(s => s.enabled).length
+
+  return (
+    <div className="bg-zinc-900 rounded-lg border border-zinc-800 mb-6">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-zinc-800 rounded-lg transition"
+      >
+        <div className="flex items-center gap-3">
+          <span className={`text-zinc-400 text-xs transition-transform ${expanded ? 'rotate-90' : ''}`}>&gt;</span>
+          <h3 className="font-medium text-white">Sources</h3>
+          <span className="text-xs text-zinc-500">({enabledCount} enabled)</span>
+        </div>
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onRefresh}
+            className="px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded transition"
+          >
+            Refresh
+          </button>
+          <button
+            onClick={() => { setShowForm(!showForm); setExpanded(true) }}
+            className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition"
+          >
+            {showForm ? 'Cancel' : 'Add'}
+          </button>
+        </div>
+      </button>
+
+      {expanded && <div className="px-4 pb-4">
+      {showForm && (
+        <form onSubmit={handleSubmit} className="mb-4 p-3 bg-zinc-800 rounded-lg">
+          {error && (
+            <div className="mb-3 p-2 bg-red-900/50 text-red-300 text-xs rounded">
+              {error}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="block text-xs text-zinc-400 mb-1">ID</label>
+              <input
+                type="text"
+                value={formData.id}
+                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                placeholder="my-source"
+                className="w-full px-2 py-1 text-sm bg-zinc-900 border border-zinc-700 rounded text-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs text-zinc-400 mb-1">Git URL</label>
+              <input
+                type="text"
+                value={formData.git_url}
+                onChange={(e) => setFormData({ ...formData, git_url: e.target.value })}
+                placeholder="https://github.com/user/repo.git"
+                className="w-full px-2 py-1 text-sm bg-zinc-900 border border-zinc-700 rounded text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Branch</label>
+              <input
+                type="text"
+                value={formData.branch}
+                onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                placeholder="main"
+                className="w-full px-2 py-1 text-sm bg-zinc-900 border border-zinc-700 rounded text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Path</label>
+              <input
+                type="text"
+                value={formData.path}
+                onChange={(e) => setFormData({ ...formData, path: e.target.value })}
+                placeholder="docs/"
+                className="w-full px-2 py-1 text-sm bg-zinc-900 border border-zinc-700 rounded text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Type</label>
+              <select
+                value={formData.source_type}
+                onChange={(e) => setFormData({ ...formData, source_type: e.target.value })}
+                className="w-full px-2 py-1 text-sm bg-zinc-900 border border-zinc-700 rounded text-white"
+              >
+                <option value="docs">Documentation (.md)</option>
+                <option value="jac">Jac Code (.jac)</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="w-full px-3 py-1 text-sm bg-green-600 hover:bg-green-500 text-white rounded transition"
+              >
+                Add Source
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      <div className="space-y-2">
+        {sources.length === 0 ? (
+          <div className="text-zinc-500 text-sm py-4 text-center">No sources configured</div>
+        ) : (
+          sources.map((source) => (
+            <div
+              key={source.id}
+              className={`flex items-center justify-between p-3 rounded-lg border ${
+                source.enabled ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-900 border-zinc-800 opacity-60'
+              }`}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-white truncate">{source.id}</span>
+                  <span className={`px-1.5 py-0.5 text-xs rounded ${
+                    source.source_type === 'docs' ? 'bg-blue-900 text-blue-300' :
+                    source.source_type === 'jac' ? 'bg-purple-900 text-purple-300' :
+                    'bg-cyan-900 text-cyan-300'
+                  }`}>
+                    {sourceTypeLabels[source.source_type]}
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-500 truncate mt-1">
+                  {source.git_url} ({source.branch}:{source.path})
+                </div>
+              </div>
+              <div className="flex items-center gap-2 ml-3">
+                <button
+                  onClick={() => onToggle(source.id)}
+                  className={`px-2 py-1 text-xs rounded transition ${
+                    source.enabled
+                      ? 'bg-green-900 text-green-300 hover:bg-green-800'
+                      : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
+                  }`}
+                >
+                  {source.enabled ? 'Enabled' : 'Disabled'}
+                </button>
+                <button
+                  onClick={() => onDelete(source.id)}
+                  className="px-2 py-1 text-xs bg-red-900 text-red-300 hover:bg-red-800 rounded transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      </div>}
+    </div>
+  )
+}
+
+function FileEditor() {
+  const [files, setFiles] = useState([])
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [content, setContent] = useState('')
+  const [originalContent, setOriginalContent] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [modifiedFiles, setModifiedFiles] = useState(new Set())
+  const saveTimeoutRef = useRef(null)
+
+  const fetchFiles = async () => {
+    try {
+      const [configRes, promptsRes] = await Promise.all([
+        fetch('/api/config'),
+        fetch('/api/prompts')
+      ])
+      const configData = await configRes.json()
+      const promptsData = await promptsRes.json()
+
+      const fileList = [
+        { name: 'config.yaml', type: 'config', language: 'yaml' },
+        ...promptsData.map(p => ({
+          name: p.filename,
+          type: 'prompt',
+          language: 'plaintext'
+        }))
+      ].sort((a, b) => {
+        if (a.type === 'config') return -1
+        if (b.type === 'config') return 1
+        return a.name.localeCompare(b.name)
+      })
+      setFiles(fileList)
+
+      if (fileList.length > 0 && !selectedFile) {
+        loadFile(fileList[0])
+      }
+    } catch (err) {
+      setError('Failed to load files')
+    }
+  }
+
+  useEffect(() => {
+    fetchFiles()
+  }, [])
+
+  const loadFile = async (file) => {
+    try {
+      let data
+      if (file.type === 'config') {
+        const res = await fetch('/api/config')
+        data = await res.json()
+      } else {
+        const res = await fetch(`/api/prompts/${file.name}`)
+        data = await res.json()
+      }
+      setContent(data.content)
+      setOriginalContent(data.content)
+      setSelectedFile(file)
+      setError(null)
+    } catch (err) {
+      setError('Failed to load file')
+    }
+  }
+
+  const saveFile = async () => {
+    if (!selectedFile) return
+    setSaving(true)
+    setError(null)
+    try {
+      let res
+      if (selectedFile.type === 'config') {
+        res = await fetch('/api/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        })
+      } else {
+        res = await fetch(`/api/prompts/${selectedFile.name}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        })
+      }
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail)
+      }
+      setOriginalContent(content)
+      setModifiedFiles(prev => {
+        const next = new Set(prev)
+        next.delete(selectedFile.name)
+        return next
+      })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleEditorChange = (value) => {
+    setContent(value || '')
+    if (selectedFile) {
+      const isModified = value !== originalContent
+      setModifiedFiles(prev => {
+        const next = new Set(prev)
+        if (isModified) {
+          next.add(selectedFile.name)
+        } else {
+          next.delete(selectedFile.name)
+        }
+        return next
+      })
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+      if (isModified) {
+        saveTimeoutRef.current = setTimeout(() => {
+          saveFile()
+        }, 1000)
+      }
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  return (
+    <div className="bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden" style={{ height: 'calc(100vh - 180px)' }}>
+      <div className="flex h-full">
+        <div className="w-48 border-r border-zinc-800 bg-zinc-950 overflow-y-auto">
+          <div className="p-2 text-xs text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
+            Files
+          </div>
+          {files.map((file) => (
+            <button
+              key={file.name}
+              onClick={() => loadFile(file)}
+              className={`w-full px-3 py-2 text-left text-sm truncate flex items-center gap-2 transition ${
+                selectedFile?.name === file.name
+                  ? 'bg-zinc-800 text-white'
+                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+              }`}
+            >
+              <span className="flex-1 truncate">{file.name}</span>
+              {modifiedFiles.has(file.name) && (
+                <span className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 bg-zinc-900">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-white">{selectedFile?.name || 'No file selected'}</span>
+              {saving && <span className="text-xs text-zinc-400">Saving...</span>}
+            </div>
+            {error && <span className="text-xs text-red-400">{error}</span>}
+          </div>
+
+          <div className="flex-1">
+            {selectedFile && (
+              <Editor
+                height="100%"
+                language={selectedFile.language}
+                value={content}
+                onChange={handleEditorChange}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  tabSize: 2,
+                  automaticLayout: true,
+                }}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -157,9 +548,23 @@ function LogEntry({ event }) {
     stage_complete: 'text-green-400',
     stage_error: 'text-red-400',
     progress: 'text-zinc-500',
+    summary: 'text-white',
   }
 
   if (event.event === 'progress') return null
+
+  if (event.event === 'summary') {
+    return (
+      <div className="text-xs font-mono py-2 border-b border-zinc-700 bg-zinc-900/50">
+        <div className="text-green-400 font-bold mb-1">Pipeline Summary</div>
+        {event.data.lines.map((line, i) => (
+          <div key={i} className={line.startsWith('  ') ? 'text-zinc-400' : 'text-zinc-300'}>
+            {line}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="text-xs font-mono py-1 border-b border-zinc-800">
@@ -171,8 +576,10 @@ function LogEntry({ event }) {
 }
 
 function App() {
+  const [page, setPage] = useState('pipeline')
   const [connected, setConnected] = useState(false)
   const [running, setRunning] = useState(false)
+  const [sources, setSources] = useState([])
   const [stages, setStages] = useState({
     fetch: { name: 'Fetch & Sanitize', status: 'pending', input_size: 0, output_size: 0, files: [], compression_ratio: 1 },
     extract: { name: 'Topic Extraction', status: 'pending', input_size: 0, output_size: 0, files: [], compression_ratio: 1 },
@@ -186,6 +593,88 @@ function App() {
   const [metrics, setMetrics] = useState(null)
   const wsRef = useRef(null)
   const logsEndRef = useRef(null)
+  const stagesRef = useRef(stages)
+
+  useEffect(() => {
+    stagesRef.current = stages
+  }, [stages])
+
+  const generateSummary = (duration) => {
+    const s = stagesRef.current
+    const lines = []
+
+    const totalInput = s.fetch.input_size
+    const totalOutput = s.compress.output_size
+    const overallRatio = totalInput > 0 ? ((1 - totalOutput / totalInput) * 100).toFixed(1) : 0
+
+    lines.push(`Total: ${formatBytes(totalInput)} -> ${formatBytes(totalOutput)} (${overallRatio}% reduction)`)
+    if (duration) lines.push(`Duration: ${formatDuration(duration)}`)
+    lines.push('')
+
+    const stageOrder = ['fetch', 'extract', 'merge', 'reduce', 'compress']
+    for (const key of stageOrder) {
+      const stage = s[key]
+      if (stage.status === 'complete') {
+        const reduction = stage.input_size > 0
+          ? ((1 - stage.output_size / stage.input_size) * 100).toFixed(0)
+          : 0
+        const fileCount = stage.file_count || stage.files?.length || 0
+        lines.push(`${stage.name}:`)
+        lines.push(`  ${formatBytes(stage.input_size)} -> ${formatBytes(stage.output_size)} (${reduction}% reduction, ${fileCount} files)`)
+      } else if (stage.status === 'error') {
+        lines.push(`${stage.name}: ERROR`)
+        if (stage.error) lines.push(`  ${stage.error}`)
+      }
+    }
+
+    return lines
+  }
+
+  const fetchSources = async () => {
+    try {
+      const res = await fetch('/api/sources')
+      const data = await res.json()
+      setSources(data)
+    } catch (err) {
+      console.error('Failed to fetch sources:', err)
+    }
+  }
+
+  const addSource = async (sourceData) => {
+    const res = await fetch('/api/sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sourceData),
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.detail || 'Failed to add source')
+    }
+    await fetchSources()
+  }
+
+  const deleteSource = async (id) => {
+    if (!confirm(`Delete source "${id}"?`)) return
+    try {
+      await fetch(`/api/sources/${id}`, { method: 'DELETE' })
+      await fetchSources()
+    } catch (err) {
+      console.error('Failed to delete source:', err)
+    }
+  }
+
+  const toggleSource = async (id) => {
+    try {
+      await fetch(`/api/sources/${id}/toggle`, { method: 'POST' })
+      await fetchSources()
+    } catch (err) {
+      console.error('Failed to toggle source:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchSources()
+  }, [])
 
   useEffect(() => {
     const connect = () => {
@@ -211,7 +700,21 @@ function App() {
           setProgress({})
         }
 
-        if (msg.event === 'pipeline_complete' || msg.event === 'pipeline_error') {
+        if (msg.event === 'pipeline_complete') {
+          setRunning(false)
+          setProgress({})
+          if (msg.data) setMetrics(msg.data)
+          setTimeout(() => {
+            const summaryLines = generateSummary(msg.data?.total_duration)
+            setLogs(prev => [...prev, {
+              event: 'summary',
+              timestamp: new Date().toISOString(),
+              data: { lines: summaryLines }
+            }])
+          }, 100)
+        }
+
+        if (msg.event === 'pipeline_error') {
           setRunning(false)
           setProgress({})
           if (msg.data) setMetrics(msg.data)
@@ -304,40 +807,75 @@ function App() {
     <div className="min-h-screen bg-zinc-950 text-white p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Pipeline Dashboard</h1>
-            <p className="text-zinc-500 text-sm">Documentation compression pipeline</p>
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-2xl font-bold">Pipeline Dashboard</h1>
+              <p className="text-zinc-500 text-sm">Documentation compression pipeline</p>
+            </div>
+            <div className="flex gap-1 bg-zinc-900 rounded-lg p-1">
+              <button
+                onClick={() => setPage('pipeline')}
+                className={`px-4 py-1.5 text-sm rounded-md transition ${
+                  page === 'pipeline' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Pipeline
+              </button>
+              <button
+                onClick={() => setPage('config')}
+                className={`px-4 py-1.5 text-sm rounded-md transition ${
+                  page === 'config' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Config
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
             <span className="text-sm text-zinc-400">{connected ? 'Connected' : 'Disconnected'}</span>
-            <button
-              onClick={runPipeline}
-              disabled={running || !connected}
-              className={`px-4 py-2 rounded font-medium transition ${
-                running || !connected
-                  ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-500 text-white'
-              }`}
-            >
-              {running ? 'Running...' : 'Run Pipeline'}
-            </button>
+            {page === 'pipeline' && (
+              <button
+                onClick={runPipeline}
+                disabled={running || !connected}
+                className={`px-4 py-2 rounded font-medium transition ${
+                  running || !connected
+                    ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white'
+                }`}
+              >
+                {running ? 'Running...' : 'Run Pipeline'}
+              </button>
+            )}
           </div>
         </div>
 
-        {(totalInput > 0 || metrics) && (
+        {page === 'config' && (
+          <>
+            <SourcePanel
+              sources={sources}
+              onAdd={addSource}
+              onDelete={deleteSource}
+              onToggle={toggleSource}
+              onRefresh={fetchSources}
+            />
+            <FileEditor />
+          </>
+        )}
+
+        {page === 'pipeline' && (
           <div className="grid grid-cols-4 gap-4 mb-6">
             <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-800">
               <div className="text-zinc-500 text-sm">Total Input</div>
-              <div className="text-xl font-bold">{formatBytes(totalInput)}</div>
+              <div className="text-xl font-bold">{totalInput > 0 ? formatBytes(totalInput) : '-'}</div>
             </div>
             <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-800">
               <div className="text-zinc-500 text-sm">Total Output</div>
-              <div className="text-xl font-bold">{formatBytes(totalOutput)}</div>
+              <div className="text-xl font-bold">{totalOutput > 0 ? formatBytes(totalOutput) : '-'}</div>
             </div>
             <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-800">
               <div className="text-zinc-500 text-sm">Compression</div>
-              <div className={`text-xl font-bold ${overallRatio < 0.05 ? 'text-green-400' : ''}`}>
+              <div className={`text-xl font-bold ${overallRatio > 0 && overallRatio < 0.05 ? 'text-green-400' : ''}`}>
                 {overallRatio > 0 ? `${(overallRatio * 100).toFixed(2)}%` : '-'}
               </div>
             </div>
@@ -350,35 +888,39 @@ function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {Object.entries(stages).map(([key, stage]) => (
-            <StageCard
-              key={key}
-              stageKey={key}
-              stage={stage}
-              isActive={activeStage === key}
-              progress={progress[key]}
-              onRun={runStage}
-              disabled={running || !connected}
-            />
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ValidationCard validation={validation} />
-
-          <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-800">
-            <h3 className="font-medium text-white mb-3">Event Log</h3>
-            <div className="h-48 overflow-y-auto bg-zinc-950 rounded p-2">
-              {logs.length === 0 ? (
-                <div className="text-zinc-600 text-sm">No events yet</div>
-              ) : (
-                logs.map((log, i) => <LogEntry key={i} event={log} />)
-              )}
-              <div ref={logsEndRef} />
+        {page === 'pipeline' && (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+              {Object.entries(stages).map(([key, stage]) => (
+                <StageCard
+                  key={key}
+                  stageKey={key}
+                  stage={stage}
+                  isActive={activeStage === key}
+                  progress={progress[key]}
+                  onRun={runStage}
+                  disabled={running || !connected}
+                />
+              ))}
             </div>
-          </div>
-        </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ValidationCard validation={validation} />
+
+              <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-800">
+                <h3 className="font-medium text-white mb-3">Event Log</h3>
+                <div className="h-48 overflow-y-auto bg-zinc-950 rounded p-2">
+                  {logs.length === 0 ? (
+                    <div className="text-zinc-600 text-sm">No events yet</div>
+                  ) : (
+                    logs.map((log, i) => <LogEntry key={i} event={log} />)
+                  )}
+                  <div ref={logsEndRef} />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

@@ -209,14 +209,20 @@ class PipelineRunner:
         await self.emit("stage_start", {"stage": "fetch"})
 
         try:
-            source_files = list(self.src.rglob("*.md"))
-            stage.input_size = sum(f.stat().st_size for f in source_files)
-            stage.file_count = len(source_files)
-
             sanitizer = Sanitizer(self.cfg)
             stats = await asyncio.to_thread(
                 sanitizer.run, self.src, self.sanitized_dir
             )
+
+            input_size = 0
+            input_file_count = 0
+            for source_stats in stats.get("sources", []):
+                for f in source_stats.get("files", []):
+                    input_size += f.get("size", 0)
+                    input_file_count += 1
+
+            stage.input_size = input_size
+            stage.file_count = input_file_count
 
             out_files = list(self.sanitized_dir.rglob("*.md"))
             stage.output_size = sum(f.stat().st_size for f in out_files)
@@ -234,7 +240,8 @@ class PipelineRunner:
                     "total": stats["total_files"],
                     "kept": stats["kept_files"],
                     "excluded": stats["excluded_files"],
-                    "empty": stats["empty_files"]
+                    "empty": stats["empty_files"],
+                    "sources": len(stats.get("sources", []))
                 }
             })
 

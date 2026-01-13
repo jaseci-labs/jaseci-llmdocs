@@ -1,30 +1,33 @@
 import re
+import shutil
 from pathlib import Path
 from .validator import Validator
 
 
 class Compressor:
     def __init__(self, llm, config: dict):
+        self.root = Path(__file__).parents[2]
+        self.project_root = Path(__file__).parents[3]
         self.out_dir = Path(config.get('ultra_compression', {}).get('output_dir', 'output/4_final'))
         self.out_dir.mkdir(parents=True, exist_ok=True)
+        self.release_dir = self.project_root / "release"
         self.validator = Validator()
 
     def run(self, in_path: Path, out_name: str):
         self.out_dir.mkdir(parents=True, exist_ok=True)
-        print("Stage 4: Minifying (deterministic)...")
+        self.release_dir.mkdir(parents=True, exist_ok=True)
 
         text = in_path.read_text()
         minified = self.minify(text)
 
-        result = self.validator.validate_final(minified)
-        if not result.is_valid:
-            print(f"  Warning: {result.issues}")
-            if result.missing_patterns:
-                print(f"  Missing: {result.missing_patterns[:5]}")
+        self.validator.validate_final(minified)
 
         out_path = self.out_dir / out_name
         out_path.write_text(minified)
-        print(f"  Saved {len(text)} -> {len(minified)} chars ({len(minified)/len(text):.1%})")
+
+        candidate_path = self.release_dir / "candidate.txt"
+        shutil.copy2(out_path, candidate_path)
+
         return {'success': True}
 
     def minify(self, text: str) -> str:

@@ -1,11 +1,12 @@
 import re
 import shutil
-import subprocess
-import tempfile
 from pathlib import Path
 
-JASECI_REPO = "https://github.com/jaseci-labs/jaseci.git"
-DOCS_PATH = "docs/docs"
+from .sources import SourceManager, SourceType
+from .jac_extractor import JacExtractor
+from .semantic_extractor import SemanticExtractor
+from .lark_extractor import LarkExtractor
+
 
 EXCLUDE_PATTERNS = [
     "**/release_notes/**",
@@ -27,55 +28,11 @@ class Sanitizer:
     def __init__(self, config: dict):
         self.cfg = config
         self.min_content_length = 200
-
-    def fetch_docs(self, out_dir: Path) -> dict:
-        """Fetch latest docs from Jaseci repo, extract only .md files flattened."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_dir = Path(tmp)
-
-            subprocess.run(["git", "init"], cwd=tmp_dir, capture_output=True)
-            subprocess.run(["git", "remote", "add", "origin", JASECI_REPO], cwd=tmp_dir, capture_output=True)
-            subprocess.run(["git", "config", "core.sparseCheckout", "true"], cwd=tmp_dir, capture_output=True)
-
-            sparse_file = tmp_dir / ".git" / "info" / "sparse-checkout"
-            sparse_file.parent.mkdir(parents=True, exist_ok=True)
-            sparse_file.write_text(f"{DOCS_PATH}/*\n")
-
-            result = subprocess.run(
-                ["git", "pull", "--depth=1", "origin", "main"],
-                cwd=tmp_dir,
-                capture_output=True,
-                text=True
-            )
-
-            if result.returncode != 0:
-                raise Exception(f"Failed to fetch docs: {result.stderr}")
-
-            if out_dir.exists():
-                shutil.rmtree(out_dir)
-            out_dir.mkdir(parents=True)
-
-            source_dir = tmp_dir / "docs" / "docs"
-            md_files = list(source_dir.rglob("*.md"))
-
-            copied = 0
-            seen_names = set()
-            for md_file in md_files:
-                name = md_file.name
-
-                if name.lower() in ("index.md", "readme.md"):
-                    continue
-
-                if name in seen_names:
-                    stem = md_file.stem
-                    parent = md_file.parent.name
-                    name = f"{parent}_{stem}.md"
-
-                seen_names.add(name)
-                shutil.copy2(md_file, out_dir / name)
-                copied += 1
-
-            return {"fetched_files": copied}
+        config_path = Path(__file__).parents[2] / "config" / "config.yaml"
+        self.source_manager = SourceManager(config_path)
+        self.jac_extractor = JacExtractor(config)
+        self.semantic_extractor = SemanticExtractor(config)
+        self.lark_extractor = LarkExtractor(config)
 
     def should_exclude(self, path: Path) -> bool:
         parts = set(path.parts)
@@ -139,50 +96,140 @@ class Sanitizer:
         return len(text) > 500
 
     def run(self, docs_dir: Path, out_dir: Path) -> dict:
-        # Fetch latest docs
-        fetch_stats = self.fetch_docs(docs_dir)
+        """Fetch from all sources and process files."""
+        fetch_dir = docs_dir.parent / "fetched"
 
-        # Clean output dir
+        fetch_results = self.source_manager.fetch_all(fetch_dir)
+
         if out_dir.exists():
             shutil.rmtree(out_dir)
         out_dir.mkdir(parents=True)
 
         stats = {
-            "fetched_files": fetch_stats["fetched_files"],
+            "sources": fetch_results["sources"],
             "total_files": 0,
             "kept_files": 0,
             "excluded_files": 0,
             "empty_files": 0,
+            "jac_files": 0,
+            "jac_definitions": 0,
             "files": []
         }
 
-        md_files = list(docs_dir.glob("*.md"))
-        stats["total_files"] = len(md_files)
+        for source_stats in fetch_results["sources"]:
+            source_id = source_stats["source_id"]
+            source_dir = fetch_dir / source_id
+            source = self.source_manager.get(source_id)
 
-        for src_path in md_files:
-            if self.should_exclude(src_path):
-                stats["excluded_files"] += 1
+            if not source_dir.exists():
                 continue
 
+            if source.source_type in (SourceType.DOCS, SourceType.BOTH):
+                md_files = list(source_dir.glob("*.md"))
+                stats["total_files"] += len(md_files)
+
+                for src_path in md_files:
+                    if self.should_exclude(src_path):
+                        stats["excluded_files"] += 1
+                        continue
+
+                    try:
+                        raw = src_path.read_text(encoding='utf-8')
+                    except Exception:
+                        continue
+
+                    cleaned = self.clean_markdown(raw)
+
+                    if not self.has_useful_content(cleaned):
+                        stats["empty_files"] += 1
+                        continue
+
+                    dest_path = out_dir / src_path.name
+                    if dest_path.exists():
+                        dest_path = out_dir / f"{source_id}_{src_path.name}"
+
+                    dest_path.write_text(cleaned, encoding='utf-8')
+
+                    stats["kept_files"] += 1
+                    stats["files"].append({
+                        "path": dest_path.name,
+                        "source": source_id,
+                        "type": "docs",
+                        "original_size": len(raw),
+                        "cleaned_size": len(cleaned)
+                    })
+
+            if source.source_type in (SourceType.JAC, SourceType.BOTH):
+                jac_results = self.jac_extractor.process_directory(source_dir)
+                stats["jac_files"] += jac_results["totals"]["files"]
+                stats["jac_definitions"] += len(jac_results["all_definitions"])
+
+                if jac_results["all_definitions"]:
+                    jac_md = self.jac_extractor.generate_markdown(jac_results)
+                    jac_doc_path = out_dir / f"{source_id}_jac_examples.md"
+                    jac_doc_path.write_text(jac_md, encoding='utf-8')
+
+                    stats["kept_files"] += 1
+                    stats["files"].append({
+                        "path": jac_doc_path.name,
+                        "source": source_id,
+                        "type": "jac",
+                        "original_size": len(jac_md),
+                        "cleaned_size": len(jac_md),
+                        "definitions": len(jac_results["all_definitions"])
+                    })
+
+                ast_results = self.lark_extractor.process_directory(source_dir)
+                if ast_results["all_definitions"]:
+                    skeleton = self.lark_extractor.generate_skeleton(ast_results)
+                    skeleton_path = out_dir / f"{source_id}_jac_skeleton.md"
+                    skeleton_path.write_text(skeleton, encoding='utf-8')
+
+                    stats["kept_files"] += 1
+                    stats["files"].append({
+                        "path": skeleton_path.name,
+                        "source": source_id,
+                        "type": "skeleton",
+                        "original_size": len(jac_md) if jac_results["all_definitions"] else 0,
+                        "cleaned_size": len(skeleton),
+                        "definitions": len(ast_results["all_definitions"])
+                    })
+
+        self._extract_skeletons_from_markdown(out_dir, stats)
+
+        return stats
+
+    def _extract_skeletons_from_markdown(self, out_dir: Path, stats: dict):
+        """Extract Jac skeletons from code blocks in markdown files."""
+        all_definitions = []
+
+        for file_info in stats["files"]:
+            if file_info["type"] != "docs":
+                continue
+
+            file_path = out_dir / file_info["path"]
             try:
-                raw = src_path.read_text(encoding='utf-8')
+                content = file_path.read_text(encoding='utf-8')
+                definitions = self.semantic_extractor.extract_from_markdown(content)
+                all_definitions.extend(definitions)
             except Exception:
                 continue
 
-            cleaned = self.clean_markdown(raw)
-
-            if not self.has_useful_content(cleaned):
-                stats["empty_files"] += 1
-                continue
-
-            dest_path = out_dir / src_path.name
-            dest_path.write_text(cleaned, encoding='utf-8')
+        if all_definitions:
+            results = {
+                "all_definitions": all_definitions,
+                "totals": {"files": len([f for f in stats["files"] if f["type"] == "docs"])}
+            }
+            skeleton = self.semantic_extractor.generate_skeleton(results)
+            skeleton_path = out_dir / "docs_jac_skeleton.md"
+            skeleton_path.write_text(skeleton, encoding='utf-8')
 
             stats["kept_files"] += 1
             stats["files"].append({
-                "path": src_path.name,
-                "original_size": len(raw),
-                "cleaned_size": len(cleaned)
+                "path": skeleton_path.name,
+                "source": "docs",
+                "type": "skeleton",
+                "original_size": 0,
+                "cleaned_size": len(skeleton),
+                "definitions": len(all_definitions)
             })
-
-        return stats

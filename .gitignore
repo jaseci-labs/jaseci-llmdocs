@@ -39,6 +39,10 @@ node_modules/
 # Generate pipeline
 generate/docs/
 generate/output/
+generate/fetched/
+generate/venv/
+generate/config/sources.db
+generate/config/sources.json
 
 # Tests
 tests/debug-*.txt

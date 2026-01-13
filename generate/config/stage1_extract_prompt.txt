@@ -1,61 +1,54 @@
-You are extracting topic-specific documentation from programming language documentation.
+You are extracting API signatures and minimal examples from programming language documentation.
 
-Your task is to identify and extract content for MULTIPLE topics from the provided documentation in a SINGLE pass.
+GOAL: Extract ONLY what an LLM needs to generate correct code - signatures, syntax, and ONE example per pattern.
 
-CRITICAL RULES:
-1. EXTRACT ALL RELEVANT INFORMATION - Do not summarize or condense
-2. PRESERVE ALL CODE EXAMPLES - Keep every code snippet
-3. PRESERVE ALL SYNTAX - Keep exact syntax definitions
-4. REMOVE ONLY IRRELEVANT CONTENT - Content unrelated to any topic
-5. OUTPUT STRUCTURED FORMAT - Use clear topic separators
+EXTRACTION RULES:
+1. SIGNATURES OVER PROSE - Extract type signatures, function signatures, syntax patterns
+2. ONE EXAMPLE PER CONCEPT - Keep only the clearest, most minimal example
+3. DISCARD EXPLANATIONS - Remove prose that restates what code shows
+4. PRESERVE CRITICAL SYNTAX:
+   - Edge operators: ++>, -->, <++>, <-->, +>, <+
+   - Keywords: spawn, visit, report, here, self, with entry/exit, by llm()
+   - Type syntax: has x: type, -> return_type
 
 OUTPUT FORMAT:
-You must output content in this EXACT format:
-
 ```
-===TOPIC: topic_name_1===
-[extracted content for topic 1, or NO_RELEVANT_CONTENT if nothing found]
-
-===TOPIC: topic_name_2===
-[extracted content for topic 2, or NO_RELEVANT_CONTENT if nothing found]
-
-===TOPIC: topic_name_3===
-[extracted content for topic 3, or NO_RELEVANT_CONTENT if nothing found]
+===TOPIC: topic_name===
+[Terse syntax description - one line]
+[Signature or pattern]
+[ONE minimal code example if needed]
 ```
 
-FORMATTING RULES:
-- Remove ALL emojis and unicode symbols (▶️, ⏭️, ⬇️, ⏹️, 🔄, etc.)
-- Remove excessive markdown styling (bold, italics except in code)
-- Keep code blocks with language tags
-- Preserve technical terminology
+WHAT TO EXTRACT:
+- Function/method signatures with types
+- Archetype definitions (node, walker, edge, obj)
+- Syntax patterns and operators
+- One working example per distinct pattern
 
-CRITICAL - NO RELEVANT CONTENT:
-- If a topic has NO relevant information, write ONLY: "NO_RELEVANT_CONTENT"
-- Do NOT write "I am sorry" or "I apologize" or "I cannot extract"
-- Do NOT explain why there's no content
-- WRONG: "I am sorry, but the provided documentation does not contain..."
-- CORRECT: "NO_RELEVANT_CONTENT"
+WHAT TO DISCARD:
+- Multiple examples showing the same pattern
+- Step-by-step explanations
+- Motivation/background text
+- Verbose descriptions
+
+EXAMPLE INPUT:
+"Walkers are mobile agents that traverse graphs. They carry state and execute logic. Walkers are fundamental to Jac. Here's a basic walker:
+```jac
+walker Greeter { has name: str; can greet { print(self.name); } }
+```
+Here's another walker example:
+```jac
+walker Visitor { has count: int = 0; can visit_node { self.count += 1; } }
+```"
 
 EXAMPLE OUTPUT:
-
-===TOPIC: Functions===
-Functions are defined with def keyword. Syntax: def name(param: type) -> return_type { body }
-
-Example:
+===TOPIC: walkers===
+walker: mobile agent traversing graphs with state and abilities.
 ```jac
-def greet(name: str) -> str {
-    return f"Hello {name}";
-}
+walker Name { has attr: type; can ability_name { ... } }
 ```
 
-===TOPIC: Variables===
-NO_RELEVANT_CONTENT
-
-===TOPIC: Objects===
-Objects defined with obj keyword. Syntax: obj Name { has attr: type; def method() {} }
-
 ---
-
 TOPICS TO EXTRACT:
 {topics}
 
@@ -64,4 +57,4 @@ DOCUMENTATION:
 {content}
 ---
 
-Extract content for ALL topics listed above. Use the exact format shown. Output ONLY the structured extraction.
+Extract signatures and ONE example per pattern. Be extremely concise.

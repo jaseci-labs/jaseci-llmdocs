@@ -1,0 +1,258 @@
+## Abilities
+
+### Definition & Syntax
+`can` or `def` defines logic blocks within archetypes (nodes, walkers, objects).
+- `can name(args) -> type { ... }` (Standard method)
+- `can name with [Type] [entry|exit] { ... }` (Event-triggered)
+- `impl archetype.name { ... }` (External implementation)
+
+### Event Triggers
+Logic triggered by graph traversal events. `here` refers to the current node/edge; `self` refers to the walker.
+```jac
+node N { can greet with Walker entry { print("Hi"); } }
+walker W {
+can visit_node with Node entry { visit [-->]; }
+can log_exit with root exit { report "done"; }
+}
+```
+
+### AI Delegation (`by llm()`)
+Delegates implementation to an LLM using types and docstrings.
+```jac
+def summarize(text: str) -> str by llm();
+can get_hint(n: int) -> str by llm();
+```
+
+### Common Patterns
+- **Traversal:** `can fetch with root entry { notes = [-->(`?Note)]; visit [-->]; }`
+- **Edge Creation:** `can link with Profile entry { self ++> here; }`
+- **State Change:** `can reset() -> int { self.val = 0; return self.val; }`
+- **Filtering:** `[-->(`?Note)](?owner == self.id)` (Filter nodes during traversal)
+
+## AI Agents & Abilities
+`walker Name { has attr: type; can func(args) -> type [by llm(method=str, tools=[...], **params)]; }` `node Name { def func(args) -> type by llm(); }` `enum Type { VAL1, VAL2 }`
+```jac
+walker Assistant {
+has goal: str;
+can chat(q: str) -> str by llm(method="ReAct", tools=[search]);
+can walk with entry { visit -->; report here; }
+}
+```
+
+## AI Integration
+`import from byllm.lib { Model }` `glob llm = Model(model_name: str, api_key: str, base_url: str, method: str, tools: list, hyperparams: dict);` `can name() -> type by llm(method: str, tools: list, incl_info: dict, stream: bool);` `sem TypeOrAttr = "description";`
+
+### Custom LLM & Python
+`obj MyLLM(BaseLLM) { def model_call_no_stream(params: dict) -> any { return "res"; } }`
+```python
+@by(llm_instance)
+def func(text: str) -> dict: ...
+```
+
+## API & Server
+`jac start <file.jac> [--port 8000] [--scale] [--build]` `jac streamlit <file.jac>` | `jac destroy`
+
+**Endpoints:**
+`POST /user/register` | `POST /user/login` -> `{"token": "...", "root_id": "..."}` `POST /walker/<name>` -> `{"fields": {...}}` `POST /function/<name>` -> `{"args": {...}}`
+
+**Walker API:**
+```jac
+walker api_call {
+has data: str;
+can go with entry { report {"res": self.data}; }
+}
+```
+
+## Cloud & Persistence
+`has [protected|private] attr: type;`
+```jac
+node user {
+has protected email: str;
+can login with entry { ... } with exit { ... }
+}
+```
+
+## Configuration (jac.toml)
+```toml
+[serve]
+cl_route_prefix = "cl"
+base_route_app = "app"
+```
+
+## Collections
+`has n: list[t] = [v];` | `dict[k, v] = {k: v};` | `set[t] = {v};` | `tuple = (v,);`
+```jac
+evens = [i for i in range(10) if i % 2 == 0];
+friends = [self --> (`?Person)];
+recent = [{"msg": m.content} for m in [root-->(`?Chat)]];
+enum Status { ACTIVE, INACTIVE }
+```
+
+## Context & Objects
+`obj Name { has attr: type; }` `can name with [Type] [entry|exit] { }` `with open(p, m) as v { }` | `with object { }` `here`, `self`, `root`, `allroots()`, `report {expr};`
+```jac
+with entry { root ++> Person(name="Jonah"); }
+can process with Student entry { here.messages.append(self.msg); visit [-->]; }
+```
+
+## Control Flow
+**Conditionals & Loops**
+```jac
+if x < 5 { } elif x < 10 { } else { }
+match x { case 1: ... case _: ... }
+switch x { case 1: ... default: ... }
+for i = 0 to i < 5 by i += 1 { }
+for x in coll { }
+while cond { }
+try { ... } except Type as e { ... }
+```
+
+**Walker Specific**
+- `visit [nodes] else { }`: Move to nodes; execute `else` if traversal fails.
+- `disengage;`: Stop traversal and deactivate walker.
+- `skip;`: Stop current node execution, move to next in queue.
+- `spawn`: Create walker/node instance.
+
+**LLM & Async**
+- `by llm();`: Logic/assignment delegated to LLM.
+- `glob t = flow func(); res = wait t;`: Async execution.
+
+## Package & API
+- `jac add --cl <pkg>`: Install package.
+- `jacLogin(email, password)`, `jacSignup(email, password)`: Auth built-ins.
+
+## Decorators & Modifiers
+`@dec_name`, `:modifier`
+```jac
+@timing can op(n: int) -> int;
+glob:pub URL: str = "...";
+obj :pub User { has id: int; }
+```
+
+## LLM Integration
+`can func() -> type by llm(method=..., tools=...);`
+```jac
+can summarize(text: str) -> str by llm();
+```
+
+## Custom Decorators
+```jac
+def dec(f: callable) -> callable {
+def wrap(*args: any, **kwargs: any) -> any { return f(*args, **kwargs); }
+return wrap;
+}
+```
+
+## Edges
+`edge Name { has attr: type = val; }`
+- **Creation**: `n1 ++> n2;` (dir), `n1 <++> n2;` (bi), `n1 +:edge_name:attr=val:+> n2;` (custom)
+- **Traversal**: `[-->]` (forward), `[<--]` (backward), `[-->(`?NodeType)]` (typed)
+- **Deletion**: `n1 del --> n2;`
+
+## Entry Points & Lifecycle
+- **Global**: `with entry { ... }`
+- **Archetype Hooks**: `node Name { can name with entry/exit { ... } }`
+- **Keywords**: `here` (current node), `self` (current walker/object)
+
+## Environment & Config
+- **CLI**: `jac start`, `jac run`
+- **jac.toml**: `[environments.response.headers] "Key" = "val"`
+
+## Error Handling
+`try { ... } except Type as e { ... } finally { ... }`
+- **Logic**: `raise Exception()`, `assert condition;`
+- **LLM Fallback**: `val = NonGPT.random_value_for_type(type);`
+
+## File I/O & JSON
+- **File**: `with open("path", "w") as f { f.write("data"); }`
+- **JSON**: `json.loads(str)`, `json.dumps(obj)`
+
+## LLM Integration
+`can name(args) -> type by llm(method="...", tools=[...]);`
+- **Minimal**: `def summarize(text: str) -> str by llm();`
+
+## Filtering & Selection
+- **Syntax**: `[path](?condition)`, `(list)(?condition)`
+- **Examples**:
+- `[root-->(`?Person)](?city == "NYC");`
+- `[n1->:Edge:attr >= 1:->(`?Type)];`
+- **Manual**: `traverse(source=n, depth=2, node_types=["t"], edge_types=["e"]);`
+
+## Functions & Callables
+- **Standard**: `def name(p: type = val) -> type { return val; }`
+- **Ability**: `can name(p: type) -> type;`
+- **Async**: `async def fetch(url: str) -> str;`
+- **Lambda**: `add = lambda a: int, b: int -> int : a + b;`
+- **Impl Separation**: `can name; impl can name { ... }`
+- **Public (Client)**: `def:pub Component(props: dict) -> any;`
+- **Global Var**: `glob config = {"key": "val"};`
+
+## Graph Navigation
+- **Visit**: `visit [-->];` (moves walker to next nodes)
+- **Report**: `report here.data;` (sends data to output)
+
+## Graphs
+`graph Name { has anchor root; spawn { } }`
+```jac
+root = spawn node::person(name="R");
+root +:friendship(since=2020):+> spawn node::person(name="F");
+root ++> [Node() for i in range(2)] ++> Node();
+```
+**Operators:** `++>`, `<++`, `<++>`, `+>:edge:+>`, `-->`, `->:edge:filter:->`, `[--> node_type](?attr == val)`
+**Keywords:** `here`, `root`, `spawn`, `visit`, `report`
+**LLM Traversal:** `visit [edge_pattern] by llm(method=..., tools=...);`
+**Lib:** `printgraph(node, depth=30, dot_file='g.dot', as_json=bool)`
+
+## Imports
+| Pattern | Syntax | |---------|--------| | Absolute | `import:py os;` / `import:jac math;` | | From | `import from mod { X as Y, Z }` | | Relative | `import from ..parent, item;` | | Include | `include:jac "file.jac";` / `include glob;` |
+
+## Logging
+`print(f"Val: {self.val}");` `report {"status": "ok"};` `glob logger = getLogger("n"); logger.info("msg");`
+
+## Multimodal AI
+`import from byllm.lib { Image, Video }` `def name(i: Image, v: Video) -> str by llm();`
+```jac
+with entry {
+img = Image("path.jpg");
+vid = Video(path="v.mp4", fps=1);
+report analyze(img, vid);
+}
+```
+
+## Core Archetypes
+`node N { has a: T=v; can b with W entry/exit { } }` `obj O(P) { has :pub a: T; has :priv b: T; def m(p: T) -> R { } }` `walker W { has a: T; can b with N entry/exit { visit [-->]; report here; } }` `enum E { V1 = 'val', V2 }`
+
+## Graph Operators
+- **Connect:** `a ++> b` (directed), `a <++> b` (bi), `a +>:E:a=v:+> b` (typed/attr)
+- **Traverse:** `visit [-->]`, `visit [-->](?a == v)`, `visit:0: [-->]`, `visit --> by llm()`
+- **Filter:** `[root --E--> N](?a > 10)`, `[<-:E:<-(?N)]`
+- **Lifecycle:** `spawn node_ref walker_instance(args);`, `disengage;`, `ignore node_ref;`
+
+## LLM & Semantic Integration
+- **Semantic Types:** `type Review: str { def sentiment() -> int by llm(); }`
+- **Semantic Attrs:** `has bio: str `sem: user bio` = "John" <+ "context";`
+- **LLM Methods:** `can task() -> T by llm(method="reason", tools=[obj.method]);`
+- **Global Semantics:** `sem node User "description";`
+
+## Logic & Context
+- **Keywords:** `here` (node), `self` (walker/obj), `visitor` (walker in node), `root`
+- **Global:** `glob v = 1;`, `:g: v;` (access)
+- **Null-safe:** `obj?.attr`, `list?[0]`
+- **Pipe:** `val |> func |> print;`
+- **Ref:** `&self` (address), `here.id` (UUID)
+
+## Security & Persistence
+- **Access:** `:pub`, `:priv`, `:protect`
+- **Perms:** `grant(here, WritePerm); revoke(self);`
+- **Persistence:** `commit();` (save graph state)
+
+## Standard Library
+- **JSON:** `json.dumps(obj)`, `json.loads(str)`
+- **File:** `f = file.open("path", "w"); f.write(data);`
+- **Testing:** `test name { check 1+1==2; assert x==y, "msg"; }`
+
+## Syntax & Modules
+- **Import:** `import:py from math { sqrt };`, `include:jac mod;`
+- **Version:** `module name; version v"1.0.0";`
+- **Reactive:** `cl { has count: int = 0; }` (frontend state)
+- **Specs:** `obj __specs__ { static has auth: bool = False; }`

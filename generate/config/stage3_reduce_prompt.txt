@@ -1,62 +1,63 @@
-You are a semantic compression engine. Transform documentation into dense semantic maps.
+You are compressing technical documentation to MINIMAL size for LLM context.
 
-TARGET: 10-20x size reduction while preserving ALL technical meaning.
+GOAL: Reduce to ~20% of input size. Keep ONLY what's needed to generate correct code.
 
-OUTPUT FORMAT - Use YAML-like hierarchical structure:
+AGGRESSIVE REDUCTION RULES:
+
+1. ELIMINATE DUPLICATE EXAMPLES
+   - If multiple examples show the same syntax pattern, keep only ONE
+   - Prefer shorter examples over longer ones
+   - Prefer examples that combine multiple concepts
+
+2. CONVERT PROSE TO SIGNATURES
+   Input: "Walkers can have abilities that trigger on entry or exit"
+   Output: `can name with Type entry/exit { }`
+
+3. REMOVE ALL:
+   - Explanatory prose (if code shows it, don't explain it)
+   - Background/motivation text
+   - "For example", "Note that", "You can also"
+   - Redundant examples of the same pattern
+
+4. KEEP ONLY:
+   - Unique syntax patterns
+   - One minimal example per distinct concept
+   - Critical edge cases (only if they affect correctness)
+   - API signatures with types
+
+5. COMPRESS CODE EXAMPLES:
+   - Remove comments inside code blocks
+   - Use ... for obvious body implementations
+   - Inline short examples: `node X { has a: int; }`
+
+PRESERVE EXACTLY (never remove):
+- ++>, -->, <++>, <-->, +>, <+
+- spawn, visit, report, here, self, visitor
+- by llm(), with entry, with exit
+- has x: type, -> return_type
+
+EXAMPLE:
+Input (100 words):
+"## Walkers
+Walkers are mobile computational units. They traverse graphs.
+```jac
+walker Greeter { has name: str; can greet with Person entry { print(here.name); } }
 ```
-TOPIC:
-  concept: definition
-  fn: signature->return
-  syntax: pattern
-  rel: A->B (relationships)
-  ex: minimal_code
+Another example:
+```jac
+walker Counter { has count: int = 0; can count_node with entry { self.count += 1; } }
 ```
+Walkers use visit to move."
 
-RULES:
-
-1. STRUCTURE
-   - Use hierarchy: TOPIC > subtopic > item
-   - One line per concept
-   - Indent shows nesting
-
-2. NOTATION
-   - Functions: name(params)->return
-   - Relations: A->B, A<->B, A++>B
-   - Types: name:type
-   - Optional: [param]
-   - Lists: item1|item2|item3
-
-3. PRESERVE EXACTLY
-   - All syntax: ++>, -->, <++>, <-->
-   - Keywords: spawn, visit, report, here, self
-   - Type signatures
-   - API endpoints
-   - Code in ``` blocks (compress but keep)
-
-4. REMOVE
-   - Articles (the, a, an)
-   - Filler (lets see, here we, note that)
-   - Redundant explanations
-   - Duplicate examples (keep 1 per pattern)
-
-5. COMPRESS TEXT
-   - "walker traverses nodes" -> W:trav(N)
-   - "takes parameter and returns" -> fn(p)->ret
-   - "connected via edge" -> A--E-->B
-
-EXAMPLE INPUT:
-"The walker ability allows you to traverse the graph. When you spawn a walker at the root node, it will visit each connected node. The walker reports data back using the report keyword."
-
-EXAMPLE OUTPUT:
-```
-W:
-  def: G trav ability
-  spawn: S(W)@root->V(connected)
-  output: R(data)
-```
+Output (30 words):
+"## Walkers
+`walker Name { has attr: type; can ability with Type entry { } }`
+```jac
+walker Greeter { has name: str; can greet with Person entry { print(here.name); visit [-->]; } }
+```"
 
 ---
 {content}
 ---
 
-Output semantic map (target 10-20x reduction):
+Output the compressed reference. Target: 20% of input size.

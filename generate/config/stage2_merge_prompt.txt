@@ -1,54 +1,54 @@
-You are an expert technical writer creating a CONCISE TECHNICAL REFERENCE manual.
+You are creating an ultra-compact API REFERENCE from multiple documentation sources.
 
-GOAL: CREATE A DENSE BUT READABLE REFERENCE.
-The input contains documentation from multiple sources. Your job is to synthesize this into a SINGLE, COHESIVE reference guide.
+GOAL: Produce the SMALLEST possible reference that allows correct code generation.
+
+FORMAT: Signatures + ONE example per distinct pattern. No prose.
 
 MERGE RULES:
-1.  **ELIMINATE REDUNDANCY:** If a concept is explained twice, keep the best explanation and delete the rest.
-2.  **PROTECT STANDARD LIBRARY (CRITICAL):** You MUST preserve exact function signatures and usage for standard modules: `file`, `os`, `json`, `logging`. Do NOT summarize these. List `open`, `read`, `write`, `dumps`, `loads` explicitly.
-3.  **PROTECT SYNTAX VARIANTS:** Ensure these specific patterns are preserved:
-    *   `import:py` (Python imports)
-    *   `spawn` (including spawning on lists/groups)
-    *   `has x: type` (Explicit type annotations)
-    *   `&` (Reference operator)
-    *   `.edges` (Node property)
-    *   `str "..."` (Semantic String)
-    *   `async`, `await`
-    *   `assert` (Testing/Validation)
-    *   `save`, `load` (Persistence)
-4.  **PRESERVE CODE STRUCTURE:** Keep clear, multi-line code blocks.
-5.  **RETAIN AGENT PATTERNS:** Keep examples of "Agent Loops" (using `while` with `by llm()`).
-6.  **NO FLUFF:** Remove intro/outro text.
+1. DEDUPLICATE AGGRESSIVELY - If two examples show the same pattern, keep only the simpler one
+2. SIGNATURES FIRST - List syntax/signatures before any example
+3. ONE EXAMPLE MAX - Per concept, keep only the most illustrative minimal example
+4. NO EXPLANATIONS - If the code is self-explanatory, don't explain it
+5. TERSE DESCRIPTIONS - One line max, only if truly needed
 
-PRIORITIZE:
-1.  **Syntax & API Signatures:** The exact code structure is the most important part.
-2.  **Standard Library Details:** Methods, parameters, and return types.
-3.  **Complete Examples:** Minimal but complete examples.
+PRESERVE EXACTLY:
+- Edge operators: ++>, -->, <++>, <-->, +>, <+
+- Keywords: spawn, visit, report, here, self, visitor, with entry/exit
+- LLM syntax: by llm(), by llm(method=..., tools=...)
+- Type patterns: has x: type, -> return_type
+- Standard library: file.open, json.dumps, json.loads
 
 OUTPUT FORMAT:
--   Use standard Markdown.
--   Use headers (##, ###) for structure.
--   Use code blocks (```jac) for all code.
--   Use lists for API methods.
+```
+## Section
+syntax: `pattern`
+```jac
+minimal_example();
+```
+```
 
 EXAMPLE INPUT:
 ```
-[Source: A]
-To use files, use the file module.
+Source A: Nodes store data. They have attributes.
+node Person { has name: str; }
 
-[Source: B]
-import:py from json {dumps};
-file.open(path: str) -> File
+Source B: Nodes are graph vertices with state.
+node User { has id: int; has email: str; }
+
+Source C: Example node with methods:
+node Counter { has val: int = 0; def inc() { self.val += 1; } }
 ```
 
 EXAMPLE OUTPUT:
 ```
-## File I/O
-Module: `file`
-- `open(path: str) -> File`
-
-## Imports
-- `import:py` for Python interop.
+## Nodes
+`node Name { has attr: type; def method() -> type { } }`
+```jac
+node Counter {
+    has val: int = 0;
+    def inc() { self.val += 1; }
+}
+```
 ```
 
 ---
@@ -56,4 +56,4 @@ INPUT CONTENT:
 {content}
 ---
 
-Output ONLY the merged reference documentation.
+Output ONLY the merged API reference. Minimize size while preserving all syntax patterns.

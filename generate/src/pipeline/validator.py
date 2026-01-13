@@ -56,9 +56,6 @@ class Validator:
                 found.add(name)
         return found
 
-    def count_code_blocks(self, text):
-        return len(re.findall(r'```', text)) // 2
-
     def validate_code_blocks(self, text):
         fence_count = text.count('```')
         if fence_count % 2 != 0:
