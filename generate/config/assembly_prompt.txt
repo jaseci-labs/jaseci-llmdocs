@@ -14,25 +14,25 @@ OUTPUT FORMAT:
 
 MANDATORY TOPICS (cover all in dense prose):
 
-1. SYNTAX & TYPES: Jac supersets Python syntax with curly braces and enhanced type system. Primitives (int, float, str, bool, bytes, any). Collections (list, dict, set, tuple, frozenset) with type params. Type unions (int | None). Type annotations (has x: type, -> return_type). Control flow (if/elif/else, for, while, match/case). Standalone functions use def: def func_name(param: type) -> return_type { body }. IMPORTANT: can is ONLY for abilities with event clauses (can name with Type entry), never for standalone functions. Lambdas (lambda params -> type { body } or lambda params: expression). Entry point (with entry { }). Global variables use glob at module level: glob config: Config = Config(); - read globals directly by name (LEGB resolution), but to modify a global use global varname; declaration first.
+1. SYNTAX & TYPES: Jac supersets Python syntax with curly braces and enhanced type system. Primitives (int, float, str, bool, bytes, any). Collections (list, dict, set, tuple, frozenset) with type params. Type unions (int | None). Type annotations (has x: type, -> return_type). Control flow: if/elif/else, for item in items { }, while cond { }. JAC FOR LOOP: for i = 0 to i < 10 by i += 1 { print(i); }. MATCH/CASE: match status { case Status.PENDING { print("Waiting"); } case Status.ACTIVE { print("Active"); } }. Standalone functions use def: def func_name(param: type) -> return_type { body }. IMPORTANT: can is ONLY for abilities with event clauses (can name with Type entry), never for standalone functions. Lambdas: |params| -> type { body }. Entry point: with entry { }. Global variables: glob config: Config = Config(); at module level, use global varname; to modify.
 
-2. IMPORTS: Jac seamlessly imports from Python ecosystem - any Python library works directly. Simple (import os;). Multiple (import sys, json;). Alias (import datetime as dt;). From (import from math { sqrt, pi }). Include (include module_path;). Import from sklearn, torch, numpy, or any Python package with zero configuration.
+2. IMPORTS: Jac seamlessly imports from Python ecosystem. Jac imports: import from module_name { Symbol1, Symbol2 }. Python imports: import:py os; import:py from datetime { datetime };. Aliased: import from module { Original as Alias }. Simple: import os;. Multiple: import sys, json;. Alias: import datetime as dt;. From: import from math { sqrt, pi }. Include: include module_path;. Any Python package works: sklearn, torch, numpy with zero configuration.
 
 3. ARCHETYPES: node (has for fields, def for methods, can with entry/exit for abilities). edge (has for fields, typed connections). walker (has for state, can with entry/exit for traversal abilities, visit, spawn). obj (value objects, def for methods, postinit). enum (enumerations with values). Include inline examples showing def for methods and can only with event clauses.
 
-4. ACCESS MODIFIERS: :pub (public, default), :priv (private), :protect (protected). Show on both has and def.
+4. ACCESS MODIFIERS: Three levels: :pub (public, default), :priv (private), :prot (protected - NOT :protect or :protected). SYNTAX: modifier comes AFTER keyword with NO space: has:priv balance: float; (NOT has :priv: or :priv has). For methods: def:pub get_data() -> str { }. For abilities: can:prot helper with entry { }. Example: obj Account { has:pub name: str; has:priv balance: float; def:pub deposit(amt: float) { }; def:priv internal() { }; }.
 
-5. GRAPH OPERATIONS: Connect operators (++> forward, <++ reverse, <++> bidirectional). Typed connect syntax: a +>: Friend :+> b (edge type between +>: and :+> with spaces). With attributes: a +>: Friend(since=2020) :+> b. Typed patterns: +>: EdgeType :+> forward, <+: EdgeType :<+ reverse, <+: EdgeType :+> bidirectional. Disconnect (del). Traverse ([-->], [<--], [<-->]). Typed traverse ([->:EdgeType:->]). Node filter ([-->(`?NodeType)]). Attribute filter ((?attr == val)). Include examples.
+5. GRAPH OPERATIONS: Define edge type: edge Road { has distance: float; has toll: bool = false; }. Simple connect: a ++> b; (forward), a <++> b; (bidirectional). Typed edge (no attrs): a +>:Road:+> b;. Typed edge with attrs: a +>:Road:distance=100.5:+> b;. Multiple attrs: a +>:Road:distance=100.5:toll=true:+> b;. Disconnect: del a --> b; (specific), del --> b; (all incoming to b), del a -->; (all outgoing from a). Traverse: [-->] (forward), [<--] (backward), [<-->] (both). Typed traverse: [-->:Road:] or [->:Road:->]. Node filter: [-->(`?City)]. Attribute filter: [-->](?population > 1000000). Combined: [-->(`?City)](?population > 1000000 and active == true).
 
 6. ABILITIES & EVENTS: Abilities use can with event clauses - can name with Type entry { } or can name with Type exit { }. CRITICAL: can ALWAYS requires "with ... entry" or "with ... exit" - use def for regular methods. Generic abilities use can name with entry { } to trigger on any type. Execution order (node entry -> walker entry -> walker exit -> node exit). Keywords (self, here, visitor, props, root, `root).
 
-7. WALKER CONTROL: spawn (walker() spawn node). visit (visit [-->], visit [-->] else { }). disengage (stop walker). report (return values). skip (skip current node). Include traversal example.
+7. WALKER CONTROL: spawn: walker() spawn node; or MyWalker() spawn `root;. visit: visit [-->]; or visit [-->] else { handle_leaf(); }. disengage: stops walker completely, returns early. report: collects return values from walker. skip: skips current node processing (like continue): for item in items { if item.invalid { skip; } process(item); }. Example: can process with Node entry { if here.is_target { report here; disengage; } visit [-->]; }.
 
-8. AI INTEGRATION: by llm() basic. by llm(method="Reason") chain-of-thought. by llm(method="ReAct") reasoning with actions. by llm(model=var) model selection. by llm(tools=[funcs]) tool use. glob llm = Model(model_name="..."). Semstrings ("""description""" and :sem:). Structured output with enums/objects. Multimodal (Image(url=), Video(path=, fps=)). Include example.
+8. AI INTEGRATION: CORRECT IMPORT: import from jaclang.core.llms { Model }. REQUIRED PATTERN: glob llm = Model(model_name="gpt-4o"); at module level. Basic: def summarize(text: str) -> str by llm; (no parentheses after llm for basic). With model ref: def translate(text: str) -> str by llm(model=llm);. Method in object: obj Assistant { def answer(q: str) -> str by llm; }. Structured output: def analyze(text: str) -> AnalysisObj by llm;. Advanced: by llm(method="Reason") chain-of-thought, by llm(method="ReAct") tool-using agent, by llm(tools=[funcs]) tool use. Semstrings: has description: str """semantic hint for LLM"""; or :sem: annotation. Multimodal: Image(url=), Video(path=, fps=). COMMON MISTAKES: Wrong: by llm() with empty parens. Wrong: import from byllm. Wrong: using by llm without glob model declaration.
 
 9. FILE I/O & JSON: file.open(path, mode), file.read(), file.write(), file.close(). json.dumps(obj), json.loads(str).
 
-10. CLOUD & API: Jac enables fullstack development - backend APIs and frontend UIs in one codebase. jac serve file.jac starts the server. Walkers become API endpoints automatically. __specs__ as nested obj with static has fields (obj __specs__ { static has auth: bool = False; static has methods: list = ["GET"]; }). report for response. File upload (UploadFile). Client/server code: everything can live in one .jac file using cl { } and sv { } blocks, or optionally split into separate .cl.jac files for larger projects. Include endpoint example.
+10. CLOUD & API: jac serve file.jac starts server. Walkers become API endpoints automatically. __specs__ MUST be nested obj with static has fields (NOT a dict): walker MyEndpoint { has data: str; obj __specs__ { static has methods: list = ["GET", "POST"]; static has auth: bool = true; static has path_prefix: str = "/api/v1/custom"; static has as_query: list = ["param1"]; } can handle with `root entry { report {"status": "ok", "data": self.data}; } }. WRONG: __specs__ = {"methods": [...]}. report returns response data. File upload uses UploadFile type. Fullstack: use cl { } for frontend, sv { } for backend in same .jac file, or split to .cl.jac files for larger projects.
 
 11. WEBSOCKET: methods: ["websocket"] in __specs__. Socket methods (socket.notify_users(), notify_channels(), notify_clients()).
 
@@ -44,31 +44,39 @@ MANDATORY TOPICS (cover all in dense prose):
 
 15. PERMISSIONS: Levels (NoPerm, ReadPerm, ConnectPerm, WritePerm). Grant (_.allow_root(node, target_root, level), grant(node, level)). Revoke (_.disallow_root(node, target), revoke(node)). Custom (__jac_access__).
 
-16. PERSISTENCE: Auto-persist if connected to root. Manual (save(node), commit(), commit(Type)). Global nodes (glob). References (&"n::id").
+16. PERSISTENCE: Auto-persist nodes connected to root. Manual save: node = here ++> Item(name="test"); save(node); commit();. Reference by ID: item = &item_id;. Delete and commit: del item; commit();. Commit specific type: commit(Item);. Global nodes use glob keyword for persistent state across requests.
 
 17. TESTING: test { } blocks. assert (fail on false). check (soft assertion).
 
 18. STANDARD LIBRARY: print, input, range, len, enumerate, type, str, int, float, list, dict. String methods (upper, lower, strip, split, join, replace). List methods (append, extend, insert, remove, pop, sort, reverse). Dict methods (keys, values, items, get, update, pop).
 
-19. JSX & FRONTEND: Jac supports JSX syntax for building reactive UIs that compile to JavaScript. Components use JSX tags (<Component prop={value} />). Self-closing tags (<Input />). Fragments (<> </>). Expression interpolation ({expression}). Spread attributes ({...props}). Event handlers (onClick={handler}). Import React hooks (import from react { useState, useEffect }). File organization is flexible: put everything in one .jac file with cl { } blocks for simplicity, or optionally split into .cl.jac files (e.g., components/Button.cl.jac, hooks/useAuth.cl.jac) for larger projects - .cl.jac files compile entirely to JavaScript. Both approaches share types and interfaces seamlessly. Example: cl { def Button(props: ButtonProps) { return <button onClick={props.onClick}>{props.label}</button>; } }.
+19. JSX & FRONTEND: Jac supports reactive UIs that compile to JavaScript. SERVER BLOCK: sv { walker get_data { obj __specs__ { static has methods: list = ["get"]; static has auth: bool = false; } can fetch with `root entry { report {"data": "hello"}; } } }. CLIENT BLOCK: cl { has count: int = 0; has data: str = ""; can with entry { response = fetch("/walker/get_data"); data = response.get("data", ""); } can with [count] entry { print(f"Count changed: {count}"); } can with exit { print("Cleanup"); } def increment() { count += 1; } <div><p>f"Count: {count}"</p><button onClick={increment}>"+"</button></div> }. Mount effect: can with entry { }. Dependency effect: can with [dep] entry { }. Cleanup: can with exit { }. JSX: <Component prop={value} />, {expression}, onClick={handler}. File organization: single .jac with sv/cl blocks, or split .cl.jac files for larger projects.
 
 20. DEPLOYMENT: Docker (FROM python, pip install jaclang, jac serve). Kubernetes (deployment, service, ingress). Environment variables (DATABASE_URL, JAC_SECRET_KEY, OPENAI_API_KEY).
 
 21. PATTERNS: Include 3-4 complete inline examples. Single-file fullstack: entire app in one .jac file with cl { } for frontend, sv { } for backend, walkers for API. Optional multi-file structure for larger projects: main.jac (backend), components/*.cl.jac (React components), hooks/*.cl.jac (custom hooks). Graph traversal with collection pattern. AI-powered processing with by llm(). API endpoint walker with __specs__.
 
 CRITICAL SYNTAX TO PRESERVE EXACTLY:
-- Connect: ++>, <++, <++>, +>: EdgeType :+> (spaces around type), +>: Edge(attr=val) :+> (parens only for attributes)
-- Traverse: -->, <--, <-->, [->:EdgeType:->] (no spaces in typed traverse)
+- Connect: ++>, <++, <++>, +>:EdgeType:+> (typed edge), +>:Edge:attr=val:+> (with attributes)
+- Traverse: -->, <--, <-->, [-->:EdgeType:] (typed traverse)
 - Walker: spawn, visit, disengage, report, skip, here, self, visitor, props, root, `root
 - Functions vs Abilities: def for standalone functions and methods, can ONLY with event clause (can name with Type entry/exit)
-- LLM: by llm(), glob llm, Model, Image, Video, :sem:, method="Reason", method="ReAct"
+- LLM: import from jaclang.core.llms { Model }; glob llm = Model(model_name="..."); def func() -> T by llm; (no parens for basic)
+- Access Modifiers: has:priv (NO space), def:pub, can:prot. Use :pub :priv :prot (NOT :protect :private :public)
 - Types: has, def, ->, |
 - Globals: glob var: Type = value; at module level, read directly by name, use global varname; to modify
-- Specs: obj __specs__ { static has auth: bool; static has methods: list; }, schedule, webhook
-- Onelang: cl { } (client/frontend), sv { } (server/backend), .cl.jac (optional frontend-only files), JSX syntax (<Component />, {expression})
-- Permissions: NoPerm, ReadPerm, ConnectPerm, WritePerm, _.allow_root, _.disallow_root
-- Async: async walker, __jac__.status, create_task
-- Test: test { }, assert, check
+- Specs: obj __specs__ { static has auth: bool; static has methods: list; } (NOT a dict literal)
+- Onelang: cl { } (client/frontend), sv { } (server/backend), JSX syntax
+- Filter: [-->(`?NodeType)](?attr == val and other > 10)
+- Persistence: save(node), commit(), &id for reference
+- Control: for i = 0 to i < 10 by i += 1 { }, match x { case V { } }
+
+COMMON MISTAKES TO WARN AGAINST:
+- WRONG: by llm() with empty parens | RIGHT: by llm; or by llm(model=var)
+- WRONG: has :priv: x | RIGHT: has:priv x
+- WRONG: __specs__ = {"methods": [...]} | RIGHT: obj __specs__ { static has methods: list = [...]; }
+- WRONG: import from byllm | RIGHT: import from jaclang.core.llms { Model }
+- WRONG: can helper() { } | RIGHT: def helper() { } (can requires with...entry/exit)
 
 ---
 
