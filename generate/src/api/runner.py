@@ -10,6 +10,8 @@ from typing import Callable, Optional
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
+import tiktoken
+
 from ..pipeline.llm import LLM
 from ..pipeline.sanitizer import Sanitizer
 from ..pipeline.deterministic_extractor import DeterministicExtractor
@@ -371,12 +373,21 @@ class PipelineRunner:
             validation_result = self.validator.validate_final(result)
             patterns = self.validator.find_patterns(result)
 
+            # Count tokens using tiktoken (cl100k_base is used by GPT-4, Claude uses similar)
+            try:
+                enc = tiktoken.get_encoding("cl100k_base")
+                token_count = len(enc.encode(result))
+            except Exception:
+                token_count = len(result) // 4  # rough estimate fallback
+
             self.final_validation = {
                 "is_valid": validation_result.is_valid,
                 "issues": validation_result.issues,
                 "missing_patterns": validation_result.missing_patterns,
                 "patterns_found": len(patterns),
                 "patterns_total": len(self.validator.CRITICAL_PATTERNS),
+                "output_size": len(result),
+                "token_count": token_count,
             }
 
             stage.extra = {

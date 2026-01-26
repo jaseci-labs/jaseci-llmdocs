@@ -1,4 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
+
+.font-jetbrains {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stage-text {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.stage-button {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stage-button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
 
 button {
   cursor: pointer;
@@ -6,4 +26,107 @@ button {
 
 button:disabled {
   cursor: not-allowed;
+}
+
+@keyframes sweep-fill {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes pulse-glow-stage {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(74, 111, 165, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(74, 111, 165, 0.5));
+  }
+}
+
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.stage-arrow {
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%, 20px 50%);
+  transition: all 0.3s ease;
+}
+
+.stage-arrow:first-child {
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%, 0 0);
+  border-radius: 8px 0 0 8px;
+}
+
+.stage-arrow:last-child {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 20px 50%);
+  border-radius: 0 8px 8px 0;
+}
+
+.stage-arrow-inner {
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%, 20px 50%);
+}
+
+.stage-arrow:first-child .stage-arrow-inner {
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%, 0 0);
+}
+
+.stage-arrow:last-child .stage-arrow-inner {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 20px 50%);
+}
+
+.stage-fill {
+  background: linear-gradient(
+    90deg,
+    #4a6fa5 0%,
+    #6b5b8c 30%,
+    #4a8b8c 60%,
+    #4a6fa5 100%
+  );
+  background-size: 200% 100%;
+}
+
+.stage-fill-animated {
+  animation: gradient-flow 3s linear infinite;
+}
+
+.stage-fill-complete {
+  background: linear-gradient(90deg, #3d7a5a, #2d6b4a, #3d7a5a);
+  background-size: 200% 100%;
+}
+
+.stage-running {
+  animation: pulse-glow-stage 1.5s ease-in-out infinite;
+}
+
+.stage-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer-sweep 1.5s ease-in-out infinite;
 }
