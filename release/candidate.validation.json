@@ -1,71 +1,60 @@
 {
-  "is_valid": false,
+  "is_valid": true,
   "issues": [],
   "missing_patterns": [],
-  "patterns_found": 30,
+  "patterns_found": 29,
   "patterns_total": 32,
-  "output_size": 12376,
-  "token_count": 3696,
-  "jac_check": {
-    "total_blocks": 0,
-    "passed": 0,
+  "output_size": 10684,
+  "token_count": 3119,
+  "strict_validation": {
+    "total_blocks": 12,
+    "passed": 3,
     "failed": 0,
-    "skipped": 0,
-    "pass_rate": 0.0,
+    "skipped": 9,
+    "pass_rate": 100.0,
     "errors": []
   },
-  "quality_score": {
-    "version": "20260130_232220",
-    "timestamp": "2026-01-30T23:22:20.021533",
-    "content_hash": "85af5f10e7a49885",
-    "pattern_coverage": 0.9375,
-    "constructs": [
-      {
-        "construct": "node",
-        "examples_found": 11,
-        "examples_valid": 0
-      },
-      {
-        "construct": "edge",
-        "examples_found": 4,
-        "examples_valid": 0
-      },
-      {
-        "construct": "walker",
-        "examples_found": 22,
-        "examples_valid": 0
-      },
-      {
-        "construct": "obj",
-        "examples_found": 20,
-        "examples_valid": 0
-      },
-      {
-        "construct": "can",
-        "examples_found": 34,
-        "examples_valid": 0
-      },
-      {
-        "construct": "spawn",
-        "examples_found": 12,
-        "examples_valid": 0
-      },
-      {
-        "construct": "visit",
-        "examples_found": 1,
-        "examples_valid": 0
-      },
-      {
-        "construct": "by_llm",
-        "examples_found": 1,
-        "examples_valid": 0
-      }
-    ],
-    "regressions": [
-      "Output size decreased significantly: 18,249 -> 12,376 bytes"
-    ],
-    "improvements": [
-      "Added by_llm examples (1)"
-    ]
-  }
+  "syntax_verification": {
+    "spawn": {
+      "expected": "root spawn Walker();",
+      "found": true,
+      "correct": true
+    },
+    "connect": {
+      "expected": "a +>: EdgeType() :+> b;",
+      "found": true,
+      "correct": true
+    },
+    "traverse": {
+      "expected": "[-->:EdgeType:]",
+      "found": true,
+      "correct": true
+    },
+    "tuple_unpack": {
+      "expected": "(a, b) = func();",
+      "found": true,
+      "correct": true
+    },
+    "with_entry": {
+      "expected": "can action with `root entry { }",
+      "found": true,
+      "correct": true
+    },
+    "by_llm": {
+      "expected": "def func() -> str by llm;",
+      "found": true,
+      "correct": true
+    },
+    "lambda": {
+      "expected": "lambda x: int -> int { x * 2 }",
+      "found": true,
+      "correct": true
+    },
+    "enumerate": {
+      "expected": "for (i, x) in enumerate(items) { }",
+      "found": true,
+      "correct": true
+    }
+  },
+  "recommendation": "PASS"
 }
