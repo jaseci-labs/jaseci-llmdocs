@@ -12,7 +12,7 @@ if (docgen_dir / ".env").exists(): load_dotenv(docgen_dir / ".env")
 
 class LLM:
     APP_URL = "https://jaseci.org"
-    APP_TITLE = "Jac Documentation Generator"
+    APP_TITLE = "Jaseci DocGen"
 
     def __init__(self, config: Dict, stage_cfg: Dict = None):
         self.cfg = config['llm'].copy()
