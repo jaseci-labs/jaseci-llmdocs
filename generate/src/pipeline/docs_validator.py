@@ -158,8 +158,18 @@ class OfficialDocsValidator:
         """Remove wrong examples from text before validation."""
         lines = text.split('\n')
         cleaned = []
+        in_errors_table = False
         for line in lines:
-            if line.strip().startswith('Wrong:'):
+            stripped = line.strip().lower()
+            if stripped.startswith('wrong'):
+                continue
+            if in_errors_table:
+                if stripped.startswith('=') or stripped.startswith('-'):
+                    in_errors_table = False
+                else:
+                    continue
+            if 'common errors' in stripped or stripped == 'wrong -> right':
+                in_errors_table = True
                 continue
             line = re.split(r'[\s\(;]not\s', line)[0]
             cleaned.append(line)

@@ -29,7 +29,7 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - Optionals: str | None, not str?
 - Booleans: True/False capitalized, not true/false
 - Docstrings: before declarations, not inside function bodies
-- Lambdas: TWO FORMS. Expression: lambda x: int -> int : x * 2; Block: lambda x: int -> int { return x * 2; }; Block form REQUIRES return statement. NEVER write lambda x: T -> T { expr } without return.
+- Lambdas: TWO FORMS. Expression: lambda x: int -> int : x * 2; Block: lambda x: int -> int { return x * 2; }; Block form REQUIRES return statement. NEVER write lambda x: T -> T { expr } without return. Expression form body MUST be a pure expression (no assignments). For assignments use block form: lambda e: any -> None { input_val = e.target.value; }
 - Tuple unpacking: (a, b) = func(); parentheses required around left side
 - No pass keyword: use empty block {} or comment
 - Enumerate unpacking: for (i, x) in enumerate(items) { }; parentheses required
@@ -49,7 +49,10 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - Walrus: root +>: E() :+> (end := A(val=10)); inline assignment with :=
 - Backward typed connect: a <+: E() :<+ b; backward typed uses <+: and :<+
 - Booleans RUNTIME: true/false pass syntax check but FAIL at runtime. ALWAYS use True/False.
-- List concat: items = items + other; fails type check (__add__ overload). Use items.extend(other); or direct assignment instead.
+- List concat in cl{} blocks: items = items + [x] fails type check inside cl{} blocks only. Use items.append(x) or items.extend(other) instead. In regular server code items = items + [x] works fine. COMMON ERRORS table must qualify this as "in cl{} blocks".
+- Reserved keywords as variables: obj, node, walker, edge, enum, can, has are keywords. NEVER use them as variable names. Wrong: obj = json.loads(s); Right: data = json.loads(s);
+- Attribute ordering: non-default attributes MUST come before default attributes in the same archetype. Wrong: node N { has x: int = 0; has y: str; } Right: node N { has y: str; has x: int = 0; }
+- Test names: test blocks use identifiers not strings. Wrong: test "my test" { } Right: test my_test { }
 
 TOPICS (cover all concisely):
 
@@ -73,7 +76,7 @@ TOPICS (cover all concisely):
 
 10. BY_LLM: def f(x: str) -> str by llm; (builtin, no import); def f() -> Obj by llm(); also valid; by llm(temperature=0.7) for params; by llm(method="Reason"); has desc: str = "" """hint"""; for semstrings (default value required); "prompt" by llm; for inline
 
-11. FILE_JSON: f=file.open(p,"r"); f.read(); f.write(s); f.close(); json.dumps(obj); json.loads(s)
+11. FILE_JSON: f=file.open(p,"r"); f.read(); f.write(s); f.close(); json.dumps(data); json.loads(s) (NEVER use obj as variable name, it is a keyword)
 
 12. API: jac start file.jac; walker becomes endpoint; walker W { has d: str; obj __specs__ { static has methods: list=["GET"]; static has auth: bool=True; static has path_prefix: str="/api"; } can h with `root entry { report {"k":v}; } }; wrong: __specs__={"methods":[]}
 
@@ -89,16 +92,16 @@ TOPICS (cover all concisely):
 
 18. PERSISTENCE: nodes connected to root auto-persist; save(node); commit(); &id for reference; del node; commit(); glob var: T = val; for persistent globals
 
-19. TESTING: test name { assert cond; } (no check keyword, only assert)
+19. TESTING: test my_test { assert cond; } (no check keyword, only assert; test names are identifiers not strings; WRONG: test "name" { })
 
 20. STDLIB: print len range enumerate type str int float list dict set; s.upper() lower() strip() split() join(); l.append() extend() pop() sort(); d.keys() values() items() get()
 
 21. JSX: sv { walker W { obj __specs__ { static has methods: list=["get"]; } can f with `root entry { report {}; } } } cl { def:pub App() -> any { has count: int=0; can with entry { } can with [dep] entry { } can with exit { } def inc() { count+=1; } return <div><p>{count}</p><button onClick={inc}>+</button></div>; } }
 
-22. DEPLOY: docker: FROM python:3.11-slim; pip install jaclang; jac start main.jac; env: DATABASE_URL JAC_SECRET_KEY OPENAI_API_KEY
+22. DEPLOY: docker: FROM python:3.11-slim; pip install jaclang; jac start main.jac; jac start --scale -t kubernetes (requires -t flag for target); env: DATABASE_URL JAC_SECRET_KEY OPENAI_API_KEY
 
 PATTERNS (include 2-3 complete examples using CORRECT syntax above):
-- Fullstack single-file with sv{} and cl{} -- use +>: E() :+> for typed edges, lambda x: T -> R : expr for lambdas
+- Fullstack single-file with sv{} and cl{} -- use +>: E() :+> for typed edges; for event handlers with assignments (onChange, onClick) use BLOCK form lambda: lambda e: any -> None { val = e.target.value; } NOT expression form (expression form cannot contain assignments)
 - Walker graph traversal with visit/report -- use [->:E:->] for typed traversal, a del--> b for disconnect
 - API endpoint with __specs__ -- use match x { case V: stmt; } for match/case
 
@@ -180,6 +183,23 @@ walker WI { can go with `root entry { visit : 0 : [-->]; } }
 
 # f-string
 with entry { name = "World"; print(f"Hello {name}!"); }
+
+# Test block (identifier name, NOT string)
+test addition_works { assert 1 + 1 == 2; }
+
+# JSON (never use obj as variable -- it's a keyword)
+import json;
+with entry { s = json.dumps({"a": 1}); data = json.loads(s); }
+
+# Correct attribute ordering (non-default before default)
+node Person { has name: str; has age: int = 0; }
+
+# Lambda with assignment -- MUST use block form (expression form cannot have assignments)
+# WRONG: lambda e: any -> None : input_val = e.target.value
+# RIGHT: lambda e: any -> None { input_val = e.target.value; }
+
+# cl block list append (not + operator, cl{} blocks only)
+# items.append(x); NOT items = items + [x]; (this restriction is cl{} blocks only)
 
 ---
 

@@ -36,7 +36,19 @@ class Source:
                 self.file_patterns = "*.md,*.jac"
 
     def get_patterns_list(self) -> list[str]:
-        return [p.strip() for p in self.file_patterns.split(',')]
+        patterns = [p.strip() for p in self.file_patterns.split(',')]
+        
+        # Safeguard: if source_type is BOTH but patterns are missing one side, force include
+        if self.source_type == SourceType.BOTH:
+            has_jac = any(p.endswith('.jac') or '.jac' in p for p in patterns)
+            has_md = any(p.endswith('.md') or '.md' in p for p in patterns)
+            
+            if not has_jac:
+                patterns.append('*.jac')
+            if not has_md:
+                patterns.append('*.md')
+                
+        return patterns
 
     def to_dict(self):
         return {

@@ -189,6 +189,7 @@ class Sanitizer:
     def _extract_skeletons_from_markdown(self, out_dir: Path, stats: dict):
         """Extract Jac skeletons from code blocks in markdown files."""
         all_definitions = []
+        extractor_used = "semantic"
 
         for file_info in stats["files"]:
             if file_info["type"] != "docs":
@@ -197,7 +198,14 @@ class Sanitizer:
             file_path = out_dir / file_info["path"]
             try:
                 content = file_path.read_text(encoding='utf-8')
-                definitions = self.semantic_extractor.extract_from_markdown(content)
+                
+                # Prefer Lark/AST if available, otherwise fallback to Regex
+                if self.lark_extractor.available:
+                    definitions = self.lark_extractor.extract_from_markdown(content)
+                    extractor_used = "lark"
+                else:
+                    definitions = self.semantic_extractor.extract_from_markdown(content)
+                    
                 all_definitions.extend(definitions)
             except Exception:
                 continue
@@ -207,7 +215,12 @@ class Sanitizer:
                 "all_definitions": all_definitions,
                 "totals": {"files": len([f for f in stats["files"] if f["type"] == "docs"])}
             }
-            skeleton = self.semantic_extractor.generate_skeleton(results)
+            
+            if extractor_used == "lark":
+                skeleton = self.lark_extractor.generate_skeleton(results)
+            else:
+                skeleton = self.semantic_extractor.generate_skeleton(results)
+                
             skeleton_path = out_dir / "docs_jac_skeleton.md"
             skeleton_path.write_text(skeleton, encoding='utf-8')
 

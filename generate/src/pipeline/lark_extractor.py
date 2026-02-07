@@ -162,6 +162,47 @@ class Definition:
 
         return "\n".join(lines)
 
+    def merge(self, other: "Definition") -> None:
+        """Merge another definition into this one, keeping the union of contents."""
+        if self.kind != other.kind or self.name != other.name:
+            return
+
+        # Merge docstrings (keep longest or concatenate if different)
+        if other.docstring:
+            if not self.docstring:
+                self.docstring = other.docstring
+            elif len(other.docstring) > len(self.docstring):
+                self.docstring = other.docstring
+
+        # Merge parent (prefer existing if set, else other)
+        if not self.parent and other.parent:
+            self.parent = other.parent
+
+        # Merge attributes (deduplicate by name)
+        existing_attrs = {a.name: a for a in self.attributes}
+        for attr in other.attributes:
+            if attr.name not in existing_attrs:
+                self.attributes.append(attr)
+            else:
+                # Update existing if new one has more info (e.g., type hint)
+                existing = existing_attrs[attr.name]
+                if not existing.type_hint and attr.type_hint:
+                    existing.type_hint = attr.type_hint
+                if not existing.default and attr.default:
+                    existing.default = attr.default
+
+        # Merge abilities (deduplicate by name/signature)
+        existing_abilities = {a.name: a for a in self.abilities}
+        for ab in other.abilities:
+            if ab.name not in existing_abilities:
+                self.abilities.append(ab)
+
+        # Merge functions (deduplicate by name)
+        existing_funcs = {f.name: f for f in self.functions}
+        for func in other.functions:
+            if func.name not in existing_funcs:
+                self.functions.append(func)
+
 
 class JacASTExtractor:
     """Walk Jac AST to extract structural signatures."""
@@ -620,19 +661,35 @@ class LarkExtractor:
 
         return results
 
+    def extract_from_markdown(self, markdown: str) -> list[Definition]:
+        """Extract Jac definitions from code blocks in markdown using AST."""
+        if not self.available:
+            return []
+
+        import re
+        all_definitions = []
+        code_block_pattern = re.compile(r'```jac\s*\n(.*?)```', re.DOTALL)
+
+        for match in code_block_pattern.finditer(markdown):
+            code = match.group(1)
+            # Basic cleanup to ensure parseability if snippet is partial
+            if "{" in code and "}" not in code:
+                code += "\n}"
+            
+            definitions = self.extract_from_code(code)
+            all_definitions.extend(definitions)
+
+        return all_definitions
+
     def _deduplicate_definitions(self, definitions: list[Definition]) -> list[Definition]:
-        """Deduplicate definitions by (kind, name), keeping the most complete one."""
+        """Deduplicate definitions by (kind, name), merging contents."""
         seen = {}
         for defn in definitions:
             key = (defn.kind.value, defn.name)
             if key not in seen:
                 seen[key] = defn
             else:
-                existing = seen[key]
-                existing_score = len(existing.attributes) + len(existing.abilities) + len(existing.functions)
-                new_score = len(defn.attributes) + len(defn.abilities) + len(defn.functions)
-                if new_score > existing_score:
-                    seen[key] = defn
+                seen[key].merge(defn)
         return list(seen.values())
 
     def generate_skeleton(self, results: dict) -> str:

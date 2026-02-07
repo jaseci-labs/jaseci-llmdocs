@@ -1,73 +1,21 @@
 {
-  "is_valid": false,
-  "issues": [],
-  "missing_patterns": [],
-  "patterns_found": 37,
-  "patterns_total": 39,
-  "output_size": 15809,
-  "token_count": 4518,
-  "strict_validation": {
-    "total_blocks": 17,
-    "passed": 0,
-    "failed": 2,
-    "skipped": 15,
-    "pass_rate": 0.0,
-    "errors": [
-      {
-        "line": 249,
-        "error": "\u2716 Error: /tmp/tmpz_kk8a21.jac, line 1, col 85: No matching overload found for method \"__add__\" with the given arguments",
-        "source": "definition",
-        "code": "async def add_item() -> None { result = root spawn AddItem(name=input_val); items = items + [result.reports[0]] if result.reports else items; input_val = \"\"; }"
-      },
-      {
-        "line": 313,
-        "error": "\u2716 Error: /tmp/tmpf_s66btj.jac, line 1, col 160: Connection type must be an edge instance",
-        "source": "entry_point",
-        "code": "with entry { alice = (root ++> Person(name=\"Alice\", age=30))[0]; bob = (root ++> Person(name=\"Bob\", age=25))[0]; sf = (root ++> City(name=\"SF\"))[0]; alice +>: Friend(since=2023) :+> bob; alice +>: Liv..."
-      }
-    ]
+  "is_valid": true,
+  "strict": {
+    "total": 23,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 21,
+    "pass_rate": 100.0,
+    "errors": []
   },
-  "syntax_verification": {
-    "spawn": {
-      "expected": "root spawn Walker(); OR Walker() spawn root;",
-      "found": true,
-      "correct": true
-    },
-    "connect": {
-      "expected": "a +>: EdgeType() :+> b;",
-      "found": true,
-      "correct": true
-    },
-    "traverse": {
-      "expected": "[->:EdgeType:->]",
-      "found": true,
-      "correct": false
-    },
-    "tuple_unpack": {
-      "expected": "(a, b) = func();",
-      "found": true,
-      "correct": false
-    },
-    "with_entry": {
-      "expected": "can action with `root entry { }",
-      "found": true,
-      "correct": true
-    },
-    "by_llm": {
-      "expected": "def func() -> str by llm;",
-      "found": true,
-      "correct": true
-    },
-    "lambda": {
-      "expected": "lambda x: int -> int : x * 2",
-      "found": true,
-      "correct": true
-    },
-    "enumerate": {
-      "expected": "for (i, x) in enumerate(items) { }",
-      "found": true,
-      "correct": false
-    }
+  "syntax": {
+    "all_correct": true,
+    "incorrect": []
   },
-  "recommendation": "REVIEW"
+  "patterns": {
+    "found": 37,
+    "total": 39,
+    "missing": []
+  },
+  "recommendation": "PASS"
 }

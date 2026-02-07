@@ -194,6 +194,7 @@ class Validator:
         """
         lines = text.split('\n')
         blocks = []
+        section_definitions = []
 
         definition_keywords = (
             'node ', 'walker ', 'edge ', 'obj ', 'enum ',
@@ -205,6 +206,13 @@ class Validator:
             line = lines[i].strip()
 
             if not line or line.startswith('#') or line.startswith('//'):
+                if line.startswith('#') or (line and line[0] in '═─━='):
+                    section_definitions.clear()
+                i += 1
+                continue
+
+            if line and line[0] in '═─━=':
+                section_definitions.clear()
                 i += 1
                 continue
 
@@ -216,7 +224,7 @@ class Validator:
 
             code = None
             category = None
-            start_line = i + 1  # 1-indexed line number
+            start_line = i + 1
 
             if any(line.startswith(kw) for kw in definition_keywords):
                 code, end_line = self._extract_balanced_block(lines, i)
@@ -238,9 +246,41 @@ class Validator:
                 open_count = code.count('{')
                 close_count = code.count('}')
                 if open_count == close_count and open_count > 0:
+                    if category == 'definition':
+                        section_definitions.append(code)
+                    if category == 'entry_point':
+                        code = self._prepend_context(code, section_definitions)
                     blocks.append((start_line, code, category))
 
         return blocks
+
+    def _prepend_context(self, entry_code: str, definitions: list[str]) -> str:
+        """Prepend accumulated definitions and generate stubs for undefined types."""
+        defined_names = set()
+        for defn in definitions:
+            m = re.match(r'(node|edge|walker|obj|enum)\s+(\w+)', defn)
+            if m:
+                defined_names.add(m.group(2))
+
+        stub_lines = []
+        for m in re.finditer(r'\+>:\s*(\w+)\s*\(', entry_code):
+            name = m.group(1)
+            if name not in defined_names:
+                stub_lines.append(f'edge {name} {{ }}')
+                defined_names.add(name)
+        for m in re.finditer(r'\+\+>\s*(\w+)\s*\(', entry_code):
+            name = m.group(1)
+            if name not in defined_names:
+                stub_lines.append(f'node {name} {{ has val: int = 0; }}')
+                defined_names.add(name)
+        for m in re.finditer(r'<\+:\s*(\w+)\s*\(', entry_code):
+            name = m.group(1)
+            if name not in defined_names:
+                stub_lines.append(f'edge {name} {{ }}')
+                defined_names.add(name)
+
+        parts = stub_lines + definitions + [entry_code]
+        return '\n'.join(parts)
 
     def _extract_balanced_block(
         self, lines: list[str], start_idx: int
