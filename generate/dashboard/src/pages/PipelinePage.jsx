@@ -72,6 +72,8 @@ export default function PipelinePage({
         </div>
       )}
 
+      <ValidationErrors validation={validation} />
+
       {candidateContent && stages.assemble.status !== 'running' && (
         <div className="mb-3 p-3 bg-zinc-900/60 rounded-lg border border-zinc-800/50">
           <div className="flex items-center justify-between mb-2">
@@ -110,6 +112,56 @@ export default function PipelinePage({
         </div>
       </div>
     </>
+  )
+}
+
+function ValidationErrors({ validation }) {
+  const strict = validation?.strict_validation || validation?.strict_check
+  const syntax = validation?.syntax_verification
+  const errors = strict?.errors || []
+  const syntaxIssues = syntax
+    ? Object.entries(syntax).filter(([, v]) => v.found && !v.correct)
+    : []
+
+  if (errors.length === 0 && syntaxIssues.length === 0) return null
+
+  return (
+    <div className="mb-3 p-3 bg-zinc-900/60 rounded-lg border border-red-900/30">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-medium text-red-400">
+          Validation Errors ({errors.length + syntaxIssues.length})
+        </h3>
+        {strict && (
+          <span className="text-xs text-zinc-500">
+            {strict.passed}/{strict.passed + strict.failed} blocks pass
+            {strict.skipped > 0 && ` (${strict.skipped} skipped)`}
+          </span>
+        )}
+      </div>
+      <div className="max-h-64 overflow-y-auto space-y-1.5">
+        {errors.map((err, i) => (
+          <div key={`jac-${i}`} className="p-2 bg-zinc-950/60 rounded border border-zinc-800/50">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium text-red-400">jac check</span>
+              <span className="text-xs text-zinc-500">[{err.source}:{err.line}]</span>
+            </div>
+            <div className="text-xs text-amber-300 font-mono">{err.error}</div>
+            {err.code && (
+              <div className="mt-1 text-xs text-zinc-500 font-mono truncate">{err.code}</div>
+            )}
+          </div>
+        ))}
+        {syntaxIssues.map(([name, info]) => (
+          <div key={`syn-${name}`} className="p-2 bg-zinc-950/60 rounded border border-zinc-800/50">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium text-amber-400">syntax</span>
+              <span className="text-xs text-zinc-500">{name}</span>
+            </div>
+            <div className="text-xs text-zinc-400">Expected: <span className="text-zinc-300 font-mono">{info.expected}</span></div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 

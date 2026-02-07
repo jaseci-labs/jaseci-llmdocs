@@ -15,9 +15,9 @@ export default function StagePipeline({ stages, progress, validation, onRun, dis
       if (validation.is_valid !== undefined) return 100
       if (validation.status?.includes('complete')) return 100
       if (validation.status?.includes('progress')) {
-        return validation.total > 0 ? (validation.current / validation.total) * 100 : 50
+        return validation.total > 0 ? (validation.current / validation.total) * 100 : 0
       }
-      if (validation.status?.includes('start')) return 10
+      if (validation.status?.includes('start')) return 5
       return 0
     }
     const stage = stages[key]
@@ -26,7 +26,7 @@ export default function StagePipeline({ stages, progress, validation, onRun, dis
     if (stage.status === 'running' && progress[key]?.total > 0) {
       return (progress[key].current / progress[key].total) * 100
     }
-    if (stage.status === 'running') return 50
+    if (stage.status === 'running') return 0
     return 0
   }
 
@@ -54,8 +54,6 @@ export default function StagePipeline({ stages, progress, validation, onRun, dis
           const showProgress = isValidateStage
             ? (isRunning && validation?.total > 0)
             : (isRunning && progress[key]?.total > 0)
-
-          const strict = validation?.strict_validation || validation?.strict_check
 
           return (
             <div
@@ -111,12 +109,14 @@ export default function StagePipeline({ stages, progress, validation, onRun, dis
                 </div>
 
                 {isValidateStage ? (
-                  <ValidationStageContent
-                    validation={validation}
-                    showProgress={showProgress}
-                    stageProgress={stageProgress}
-                    strict={strict}
-                  />
+                  showProgress ? (
+                    <ProgressContent
+                      progress={{ current: validation?.current, total: validation?.total, message: validation?.message }}
+                      stageProgress={stageProgress}
+                    />
+                  ) : (
+                    <ValidationMetrics validation={validation} />
+                  )
                 ) : showProgress ? (
                   <ProgressContent progress={progress[key]} stageProgress={stageProgress} />
                 ) : (
@@ -135,65 +135,32 @@ export default function StagePipeline({ stages, progress, validation, onRun, dis
   )
 }
 
-function ValidationStageContent({ validation, showProgress, stageProgress, strict }) {
-  if (showProgress) {
-    return (
-      <div className="flex-1 flex flex-col justify-start font-jetbrains stage-text text-xs overflow-y-auto">
-        <div className="text-white mb-1 whitespace-nowrap">{validation?.message || 'Validating...'}</div>
-        <div className="h-1 bg-black/40 rounded-full overflow-hidden mb-1">
-          <div className="h-full bg-white transition-all" style={{ width: `${stageProgress}%` }} />
-        </div>
-        <div className="text-zinc-400">{validation?.current}/{validation?.total}</div>
-      </div>
-    )
-  }
+function ValidationMetrics({ validation }) {
+  const strict = validation?.strict_validation || validation?.strict_check
 
-  if (validation?.is_valid !== undefined) {
-    return (
-      <div className="flex-1 flex flex-col justify-start font-jetbrains stage-text text-xs overflow-y-auto">
-        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 whitespace-nowrap">
-          <div className="text-zinc-400">Status</div>
-          <div className={validation.is_valid ? 'text-emerald-400' : 'text-amber-400'}>
-            {validation.recommendation || (validation.is_valid ? 'PASS' : 'REVIEW')}
-          </div>
-          {strict && (
-            <>
-              <div className="text-zinc-400">Strict</div>
-              <div className={strict.failed === 0 ? 'text-emerald-400' : 'text-amber-400'}>
-                {strict.passed}/{strict.passed + strict.failed} pass
-              </div>
-            </>
-          )}
-          {validation.patterns_found !== undefined && (
-            <>
-              <div className="text-zinc-400">Patterns</div>
-              <div className="text-white">{validation.patterns_found}/{validation.patterns_total}</div>
-            </>
-          )}
-          {validation.token_count > 0 && (
-            <>
-              <div className="text-zinc-400">Tokens</div>
-              <div className="text-white">{formatTokens(validation.token_count)}</div>
-            </>
-          )}
-        </div>
-        {strict?.errors?.length > 0 && (
-          <div className="mt-1 text-amber-400/70 space-y-0.5">
-            {strict.errors.slice(0, 2).map((err, i) => (
-              <div key={i} className="whitespace-nowrap overflow-hidden text-ellipsis">
-                [{err.source}:{err.line}] {err.error}
-              </div>
-            ))}
-            {strict.errors.length > 2 && (
-              <div className="text-zinc-500">+{strict.errors.length - 2} more</div>
-            )}
-          </div>
-        )}
+  return (
+    <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs content-center font-jetbrains stage-text whitespace-nowrap">
+      <div className="text-zinc-300">Status</div>
+      <div className={
+        !validation?.is_valid === undefined ? 'text-white'
+          : validation?.is_valid ? 'text-emerald-400' : 'text-amber-400'
+      }>
+        {validation?.recommendation || (validation?.is_valid !== undefined ? (validation.is_valid ? 'PASS' : 'REVIEW') : '-')}
       </div>
-    )
-  }
-
-  return null
+      <div className="text-zinc-300">Blocks</div>
+      <div className={strict?.failed === 0 ? 'text-emerald-400' : strict ? 'text-amber-400' : 'text-white'}>
+        {strict ? `${strict.passed}/${strict.passed + strict.failed} pass` : '-'}
+      </div>
+      <div className="text-zinc-300">Patterns</div>
+      <div className="text-white">
+        {validation?.patterns_found !== undefined ? `${validation.patterns_found}/${validation.patterns_total}` : '-'}
+      </div>
+      <div className="text-zinc-300">Tokens</div>
+      <div className="text-white">
+        {validation?.token_count > 0 ? formatTokens(validation.token_count) : '-'}
+      </div>
+    </div>
+  )
 }
 
 function ProgressContent({ progress, stageProgress }) {

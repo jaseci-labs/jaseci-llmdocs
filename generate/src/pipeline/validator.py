@@ -265,14 +265,21 @@ class Validator:
             if stripped.startswith('#') and not started:
                 break
 
-            for char in stripped:
+            balance_pos = None
+            for j, char in enumerate(stripped):
                 if char == '{':
                     brace_count += 1
                     started = True
                 elif char == '}':
                     brace_count -= 1
+                if started and brace_count == 0:
+                    balance_pos = j
+                    break
 
-            result_lines.append(stripped)
+            if balance_pos is not None:
+                result_lines.append(stripped[:balance_pos + 1])
+            else:
+                result_lines.append(stripped)
             end_idx = i
 
             if started and brace_count == 0:

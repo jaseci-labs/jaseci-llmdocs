@@ -1,262 +1,432 @@
-# JAC LANGUAGE REFERENCE
+JAC LANGUAGE REFERENCE v0.9.13
 
-## 1. TYPES
+═══════════════════════════════════════════════════════════════════════════════
+
+1. TYPES
 
 Primitives: int float str bool bytes any
-Containers: list[T] dict[K,V] set[T] tuple[T,...]
-Unions: int|None str|None (not str?)
-Declaration: has x: int; has y: str = "default"
-Return: def f() -> int { }
-Booleans: True False (capitalized, not true/false)
-None: None (capitalized)
+Containers: list[T] dict[K,V] set[T] tuple
+Unions: int | None (not int?; no ? syntax)
+Booleans: True/False (capitalized; true/false pass syntax check but FAIL at runtime)
+Declaration: has x: int = 0; has name: str;
+Return type: def f() -> int { return 1; }
+Multiple has: has salary: int, experience: int;
+Optionals: has val: str | None = None;
 
-## 2. CONTROL
+2. CONTROL FLOW
 
-If: if cond { } elif cond { } else { }
-For-in: for x in items { }
-For-range: for i=0 to i<10 by i+=1 { }
-While: while cond { }
-Match: match x { case 1 { } case 2 { } case _ { } }
-Enumerate: for (i, x) in enumerate(items) { } (parentheses required)
-Tuple unpack: (a, b) = func(); (parentheses required on left)
-No pass: use {} or # comment for empty blocks
-Break/continue: break; continue;
+If/elif/else: if x > 0 { print("pos"); } elif x < 0 { print("neg"); } else { print("zero"); }
+For-each: for x in items { print(x); }
+For-range: for i=0 to i<10 by i+=1 { print(i); }
+Enumerate: for (i, x) in enumerate(items) { print(i, x); } (parentheses required)
+While: while cond { stmt; }
+Match/case: match x { case 1: print("one"); case "hi": print("hello"); case _: print("other"); }
+  WRONG: case 1 { print("one"); } RIGHT: case 1: print("one");
+Try/except: try { x = 1 / 0; } except ZeroDivisionError as e { print("caught"); } finally { print("done"); }
+  WRONG: catch TypeError { } RIGHT: except TypeError as e { }
+No pass keyword: use {} or # comment for empty blocks
+Tuple unpacking: (a, b) = func(); (parentheses required around left side)
 
-## 3. FUNCTIONS
+3. FUNCTIONS & EXPRESSIONS
 
-Regular: def name(p: T) -> R { return val; }
-Lambda: lambda x: int -> int { x * 2 }
-Lambda typed: lambda x: int, y: str -> bool { len(y) > x }
-Global: glob config: dict = {"key": "val"};
-Docstring: """desc""" def f() { } (before declaration)
-Wrong: def f() { """doc""" } Right: """doc""" def f() { }
+Regular: def greet(name: str) -> str { return f"Hello {name}!"; }
+Lambda expression: f = lambda x: int -> int : x * 2;
+Lambda block: f = lambda x: int -> int { return x * 2; }; (MUST have return)
+  WRONG: lambda x: int -> int { x * 2 } RIGHT: lambda x: int -> int { return x * 2; }
+Lambda multi-param: f = lambda x: int, y: int -> int : x + y;
+Globals: glob config: dict = {"debug": True, "version": "1.0.0"};
+Pipe: "hello world" |> print; (passes left as first arg to right)
+F-strings: print(f"Hello {name}!");
+Entry point: with entry { x = 5; print(x); }
+  WRONG: entry { } RIGHT: with entry { }
 
-## 4. IMPORTS
+4. IMPORTS
 
-Module: import os;
-Symbol: import from math { sqrt }
+Plain import: import os; (semicolon required)
+Selective: import from math { sqrt } (no semicolon after brace)
 Alias: import from datetime { datetime as dt }
-Multiple: import from module { a, b, c }
-Include: include submodule;
-Package: requires __init__.jac (like Python __init__.py)
-Wrong: import from math { sqrt }; Right: import from math { sqrt }
-Wrong: import:py os Right: import os
+Include: include module;
+Packages require __init__.jac (like Python's __init__.py)
 
-## 5. ARCHETYPES
+5. ARCHETYPES
 
-Node: node N { has f: T; def m() { } can on_v with W entry { } }
-Edge: edge E { has weight: float; }
-Walker: walker W { has s: T; can act with N entry { visit [-->]; } }
-Object: obj O { has f: T; def m() { } }
-Enum: enum E { A, B=1, C="val" }
-Enum methods: enum E { A ::py:: def method(self): pass ::py:: }
+Node: node Todo { has id: str; has title: str; has completed: bool = False; }
+Edge: edge Friend { has since: int; has strength: float = 1.0; }
+Walker: walker Finder { has query: str; can search with `root entry { visit [-->]; } }
+Object: obj Calculator { has value: int = 0; def add(n: int) -> int { self.value += n; return self.value; } }
+Enum: enum Color { RED = "red", GREEN = "green", BLUE = "blue" }
+Enum auto: enum Status { PENDING, ACTIVE, COMPLETED }
+Inheritance: obj Dog(Animal) { def speak() -> str { return "Woof!"; } }
+Walker inheritance: walker SpecialW(BaseW) { }
+Node inheritance: node SpecialN(BaseN) { }
+Impl blocks: walker Creator { can create with `root entry; } impl Creator.create { print("created"); }
+Postinit: obj MyObj { has x: int = 0; has y: int by postinit; def postinit { self.y = self.x * 2; } }
+Docstrings: placed before declarations, not inside function bodies
 
-## 6. ACCESS
+6. ACCESS CONTROL
 
-Private: has:priv f: T; def:priv m() { }
-Public: has:pub f: T; def:pub m() { }
-Protected: has:protect f: T; can:protect h with entry { }
-Only three: :pub :priv :protect
-Wrong: has :priv x Right: has:priv x (no space)
+Field: has:priv x: int; OR has :priv x: int; (both valid)
+Method: def:pub greet() -> str { }
+Ability: can:protect handler with entry { }
+Levels: :pub :priv :protect (only these three)
+Walker-level: walker:priv MyWalker { }
 
-## 7. GRAPH
+7. GRAPH OPERATIONS
 
-Connect: a ++> b; (returns list)
+Untyped connect: root ++> A(val=1); (returns list; use [0] for single node)
 Bidirectional: a <++> b;
-Typed edge: a ++> EdgeType() ++> b; (edge must be instantiated)
-Alternative typed: a +>: EdgeType() :+> b;
-Disconnect: del a --> b;
-Forward query: [-->]
-Back query: [<--]
-Typed traversal: [-->:E:]
-Filter type: [-->(`?Node)]
-Filter attr: [-->](?attr > val)
-Chained: [-->:Friend:->-->:Colleague:->]
-Edge filter: [->:Friend:since > 2020:->]
-Wrong: a +>:EdgeType:+> b Right: a ++> EdgeType() ++> b
-Connection returns list: nodes = a ++> Node(); single = nodes[0];
+Typed forward connect: a[0] +>: E(weight=0.5) :+> b[0];
+  WRONG: a ++> E() ++> b RIGHT: a +>: E() :+> b
+Typed backward connect: a[0] <+: E(weight=0.5) :<+ b[0];
+Connect with kwargs: root +>: E() : weight=0.5 :+> A(val=1);
+Walrus in connect: root +>: E() :+> (end := A(val=10));
+Disconnect: root del--> a[0];
+  WRONG: del root --> a RIGHT: root del--> a;
+Untyped traversal forward: [-->]
+Untyped traversal backward: [<--]
+Typed traversal forward: [->:E:->]
+  WRONG: [-->:E:] RIGHT: [->:E:->]
+Typed traversal backward: [<-:E:<-]
+Chained typed: [root->:E1:->->:E2:->]
+  WRONG: [-->:E1:->-->:E2:->] RIGHT: [->:E1:->->:E2:->]
+Filter by node type: [-->(`?Person)]
+Filter by node attr: [-->](?age > 18)
+Filter by edge attr: [->:Friend:since > 2020:->]
+Visit indexed: visit : 0 : [-->];
 
-## 8. ABILITIES
+8. ABILITIES
 
-Entry: can name with Type entry { }
-Exit: can name with Type exit { }
-Generic: can name with entry { }
-Always requires: with...entry or with...exit
-Use def for regular methods: def calculate() -> int { }
-Use can for node/walker interactions: can process with Item entry { }
-Context vars: self=instance here=node visitor=walker root=user_root
-Wrong: can name { } Right: can name with Type entry { }
-Never name abilities: list dict str int get set (use fetch handle process)
+Declaration: can on_enter with Visitor entry { }; can on_leave with Visitor exit { }
+Always requires with...entry or with...exit
+Use can for abilities (graph-aware); use def for regular methods
+Context variables: self=instance here=current_node visitor=walker_instance
+Never name abilities list/dict/str/int or other builtins; use fetch/get/handle instead
+Generic entry: can on_any with entry { } (fires for any walker)
 
-## 9. WALKERS
+9. WALKERS
 
-Spawn: node spawn Walker(); (node first, then spawn)
-Visit: visit [-->];
-Visit else: visit [-->] else { print("no nodes"); }
-Report: report value;
-Disengage: disengage; (stop walker completely)
-Skip: skip; (skip to next node)
-Get reports: result = node spawn Walker(); data = result.reports;
-Wrong: spawn Walker() on node Right: node spawn Walker()
-Wrong: Walker().spawn(node) Right: node spawn Walker()
+Spawn form 1: root spawn MyWalker();
+Spawn form 2: MyWalker() spawn root;
+Both valid; return walker result object
+Visit: visit [-->]; visit [->:E:->]; visit [-->] else { print("leaf"); };
+Report: report here.value; (collects values)
+Access reports: result = root spawn W(); data = result.reports;
+Disengage: disengage; (stop walker entirely)
+Skip: skip; (skip to next node in queue)
+Walker with state: walker Collector { has items: list = []; can gather with Todo entry { self.items.append(here); } can finish with `root exit { report self.items; } }
 
-Example:
-node Item { has name: str; }
-walker Collector { has items: list = []; can gather with Item entry { self.items.append(here.name); } can finish with `root exit { report self.items; } }
-with entry { root ++> Item(name="A"); root ++> Item(name="B"); result = root spawn Collector(); print(result.reports[0]); }
+10. LLM INTEGRATION (by llm)
 
-## 10. BY_LLM
+No import needed; builtin
+Function form: def classify(text: str) -> str by llm;
+With parens: def classify(text: str) -> str by llm();
+With params: def classify(text: str) -> str by llm(temperature=0.7);
+With method: def reason(q: str) -> str by llm(method="Reason");
+Inline: response = "Explain quantum computing" by llm;
+Semstrings (hints): has desc: str = "" """A short description of the item""";
+  (default value required before semstring)
+Structured output: def extract(text: str) -> MyObj by llm; (returns typed object)
+Pipeline: result = text |> (lambda t: str -> str : t by llm("Correct grammar")) |> (lambda t: str -> str : t by llm("Translate to Spanish"));
 
-Basic: def f(x: str) -> str by llm;
-Structured: def f() -> MyObj by llm;
-With params: def f() -> str by llm(temperature=0.7);
-With method: def f() -> str by llm(method="Reason");
-Semstring: has desc: str = "" """hint for LLM""";
-Inline: result = "prompt" by llm;
-Stream: def f() -> str by llm(stream=True);
-No import needed: by llm is builtin
-Wrong: by llm() Right: by llm; (semicolon, no parens)
-Wrong: by llm("prompt") Right: "prompt" by llm
+11. FILE & JSON
 
-Example:
-enum Sentiment { POSITIVE, NEGATIVE, NEUTRAL }
-def analyze(text: str) -> Sentiment by llm;
-with entry { result = analyze("I love this!"); }
+File: f = file.open("data.txt", "r"); content = f.read(); f.close();
+Write: f = file.open("out.txt", "w"); f.write("hello"); f.close();
+JSON: import json; s = json.dumps(obj); obj = json.loads(s);
 
-## 11. FILE_JSON
+12. API ENDPOINTS
 
-Open: f = file.open(path, "r");
-Read: content = f.read();
-Write: f.write(data);
-Close: f.close();
-JSON encode: s = json.dumps(obj);
-JSON decode: obj = json.loads(s);
+CLI: jac start file.jac (WRONG: jac serve); jac check file.jac to validate syntax
+Walkers become endpoints automatically
+Specs: walker ListItems { has filter: str = ""; obj __specs__ { static has methods: list = ["GET"]; static has auth: bool = True; static has path_prefix: str = "/api"; } can fetch with `root entry { report {"items": []}; } }
+  WRONG: obj __specs__ = {"methods": []} RIGHT: obj __specs__ { static has methods: list = ["GET"]; }
 
-## 12. API
-
-Start server: jac start file.jac (not jac serve)
-Check syntax: jac check file.jac
-Walker as endpoint: walker becomes HTTP endpoint automatically
-Specs object: obj __specs__ { static has methods: list = ["GET"]; static has auth: bool = True; static has path_prefix: str = "/api"; }
-Wrong: __specs__ = {"methods": ["GET"]} Right: obj __specs__ { static has methods: list = ["GET"]; }
-
-Example:
-walker GetItems { obj __specs__ { static has methods: list = ["GET"]; static has auth: bool = False; } can fetch with `root entry { report {"items": [1,2,3]}; } }
-
-## 13. WEBSOCKET
+13. WEBSOCKET
 
 Spec: obj __specs__ { static has methods: list = ["websocket"]; }
 Notify users: socket.notify_users(user_ids, message);
 Notify channels: socket.notify_channels(channel_names, message);
 
-## 14. WEBHOOKS
+14. WEBHOOKS
 
-Spec: obj __specs__ { static has webhook: dict = {"type": "header", "name": "X-Signature"}; }
-Endpoint: /webhook/walker/walker_name
+Spec: obj __specs__ { static has webhook: dict = {"type": "header", "name": "X-Sig"}; }
+Endpoint path: /webhook/walker/name
 
-## 15. SCHEDULER
+15. SCHEDULER
 
-Cron: obj __specs__ { static has schedule: dict = {"trigger": "cron", "hour": "9"}; static has private: bool = True; }
-Interval: static has schedule: dict = {"trigger": "interval", "minutes": "30"};
-Date: static has schedule: dict = {"trigger": "date", "run_date": "2024-01-01"};
+Spec: obj __specs__ { static has schedule: dict = {"trigger": "cron", "hour": "9"}; static has private: bool = True; }
+Triggers: cron interval date
 
-## 16. ASYNC
+16. ASYNC
 
-Async walker: async walker W { async can f with entry { await op(); } }
-Async function: async def fetch() -> str { return await http_get(url); }
-Task status: task.__jac__.status task.__jac__.reports task.__jac__.error
+Async walker: async walker Fetcher { has url: str; async can fetch with `root entry { data = await http_get(self.url); report data; } }
+Async function: async def process() { result = await fetch_data(); }
+Task status: task.__jac__.status; task.__jac__.reports; task.__jac__.error;
 
-## 17. PERMISSIONS
+17. PERMISSIONS
 
 Grant: node.__jac__.grant(root, WritePerm);
 Revoke: node.__jac__.revoke(root);
 Check: node.__jac__.check_access(root, ReadPerm);
 Levels: NoPerm ReadPerm ConnectPerm WritePerm
 
-## 18. PERSISTENCE
+18. PERSISTENCE
 
-Auto-persist: nodes connected to root persist automatically
-Save: save(node);
-Commit: commit();
-Reference: &node_id
+Nodes connected to root auto-persist
+Save: save(node); commit();
+Reference by id: &id
 Delete: del node; commit();
-Global persist: glob var: T = val;
+Persistent globals: glob counter: int = 0;
 
-## 19. TESTING
+19. TESTING
 
-Test block: test name { assert cond; check cond; }
-Run: jac test file.jac
+Syntax: test "addition works" { assert 1 + 1 == 2; }
+No check keyword; only assert
+Run: jac check file.jac
 
-## 20. STDLIB
+20. STDLIB
 
 Builtins: print len range enumerate type str int float list dict set
-String: s.upper() s.lower() s.strip() s.split() s.join(list)
-List: l.append(x) l.extend(list) l.pop() l.sort()
-Dict: d.keys() d.values() d.items() d.get(k, default)
+String: s.upper() s.lower() s.strip() s.split(",") ",".join(items)
+List: l.append(x) l.extend(other) l.pop() l.sort() (WRONG: items = items + other; RIGHT: items.extend(other);)
+Dict: d.keys() d.values() d.items() d.get("k", default)
 
-## 21. JSX
+21. JSX / FULLSTACK
 
-Server block: sv { }
-Client block: cl { }
-Component: def:pub App() -> any { has count: int = 0; return <div>{count}</div>; }
-State: has count: int = 0; (auto-reactive)
-Mount: can with entry { }
-Unmount: can with exit { }
-Dependency: can with [dep] entry { }
-Multi-dep: can with (a, b) entry { }
-Props: def:pub Comp(props: dict) -> any { return <div>{props.name}</div>; }
-Event: <button onClick={handler}>Click</button>
-Conditional: if cond { return <A />; } return <B />;
-List: items.map(lambda x: any -> any { <li>{x}</li> })
+Server block: sv { } Client block: cl { }
+File extensions: .sv.jac (server default) .cl.jac (client default) .jac (server default)
+Single-statement: sv import from .db { connect };
+Component: cl { def:pub App() -> any { has count: int = 0; can with entry { } can with [dep] entry { } can with exit { } def inc() { count += 1; } return <div><p>{count}</p><button onClick={inc}>+</button></div>; } }
+Lifecycle mapping: can with entry { } = useEffect(()=>{}, []); can with exit { } = useEffect cleanup; can with [dep] entry { } = useEffect(()=>{}, [dep]); can with (a, b) entry { } = useEffect(()=>{}, [a, b])
+Props: def:pub Greeting(props: dict) -> any { return <h1>Hello, {props.name}!</h1>; }
+Fragment: return <>{props.children}</>;
 
-Example:
-sv { walker GetData { obj __specs__ { static has methods: list = ["GET"]; } can fetch with `root entry { report {"msg": "hello"}; } } }
-cl { def:pub App() -> any { has data: dict = {}; async can with entry { data = root spawn GetData(); } return <div>{data.msg}</div>; } }
+22. DEPLOY
 
-## 22. DEPLOY
-
-Dockerfile: FROM python:3.11-slim
-RUN pip install jaclang
-COPY . /app
-WORKDIR /app
-CMD ["jac", "start", "main.jac"]
-
+Docker: FROM python:3.11-slim; RUN pip install jaclang; CMD jac start main.jac
 Env vars: DATABASE_URL JAC_SECRET_KEY OPENAI_API_KEY
 
-## PATTERNS
+═══════════════════════════════════════════════════════════════════════════════
 
-### Fullstack Single-File
-sv { node Item { has name: str; } walker ListItems { obj __specs__ { static has methods: list = ["GET"]; } can fetch with `root entry { items = [-->(`?Item)]; report [{"name": i.name} for i in items]; } } walker AddItem { has name: str; obj __specs__ { static has methods: list = ["POST"]; } can create with `root entry { root ++> Item(name=self.name); report {"ok": True}; } } }
-cl { def:pub App() -> any { has items: list = []; has newName: str = ""; async can with entry { result = root spawn ListItems(); items = result.reports[0] if result.reports else []; } async def addItem() { root spawn AddItem(name=newName); newName = ""; result = root spawn ListItems(); items = result.reports[0]; } return <div><input value={newName} onChange={lambda e: any -> None { newName = e.target.value; }} /><button onClick={addItem}>Add</button><ul>{items.map(lambda i: dict -> any { <li>{i["name"]}</li> })}</ul></div>; } }
+PATTERN 1: FULLSTACK SINGLE-FILE (sv/cl with typed edges, lambdas)
 
-### Walker Graph Traversal
-node Person { has name: str; has age: int; }
-edge Knows { has since: int; }
-walker FindFriends { has min_age: int = 0; has found: list = []; can start with `root entry { visit [-->]; } can check with Person entry { if here.age >= self.min_age { self.found.append(here.name); } visit [-->:Knows:]; } can finish with `root exit { report self.found; } }
-with entry { p1 = root ++> Person(name="Alice", age=30); p2 = p1[0] ++> Knows(since=2020) ++> Person(name="Bob", age=25); result = root spawn FindFriends(min_age=20); print(result.reports[0]); }
+sv {
+    node Item { has id: str; has name: str; has done: bool = False; }
+    edge Owns { has since: str; }
 
-### API Endpoint with Specs
-walker CreateUser { has email: str; has name: str; obj __specs__ { static has methods: list = ["POST"]; static has auth: bool = False; static has path_prefix: str = "/api/v1"; } can create with `root entry { user_id = str(uuid4()); root ++> User(id=user_id, email=self.email, name=self.name); report {"id": user_id, "email": self.email, "name": self.name}; } }
-walker GetUser { has user_id: str; obj __specs__ { static has methods: list = ["GET"]; static has auth: bool = True; } can fetch with `root entry { users = [-->(`?User)](?id == self.user_id); if users { report {"user": users[0]}; } else { report {"error": "not found"}; } } }
+    walker AddItem {
+        has name: str;
+        obj __specs__ { static has methods: list = ["POST"]; }
+        can create with `root entry {
+            import datetime;
+            root +>: Owns(since=datetime.datetime.now().strftime("%Y-%m-%d")) :+> (item := Item(id="1", name=self.name));
+            report {"id": item.id, "name": item.name};
+        }
+    }
 
-## ENTRY POINT
+    walker ListItems {
+        obj __specs__ { static has methods: list = ["GET"]; }
+        can fetch with `root entry {
+            items: list = [];
+            for n in [->:Owns:->] {
+                items.append({"id": n.id, "name": n.name, "done": n.done});
+            }
+            report items;
+        }
+    }
+}
 
-Module entry: with entry { } (not entry { })
-Wrong: entry { code } Right: with entry { code }
+cl {
+    def:pub App() -> any {
+        has items: list = [];
+        has input_val: str = "";
 
-## COMMON ERRORS
+        async can with entry {
+            result = root spawn ListItems();
+            items = result.reports[0] if result.reports else [];
+        }
 
-Wrong: jac serve file.jac Right: jac start file.jac
-Wrong: spawn Walker() on node Right: node spawn Walker()
-Wrong: entry { } Right: with entry { }
-Wrong: import from x { y }; Right: import from x { y }
-Wrong: by llm() Right: by llm;
-Wrong: has :priv x Right: has:priv x
-Wrong: str? Right: str|None
-Wrong: true false Right: True False
-Wrong: a +>:Edge:+> b Right: a ++> Edge() ++> b
-Wrong: pass Right: {} or # comment
-Wrong: for i, x in enumerate(items) Right: for (i, x) in enumerate(items)
-Wrong: a, b = func() Right: (a, b) = func()
-Wrong: can list with entry { } Right: can fetch with entry { }
-Wrong: __specs__ = {} Right: obj __specs__ { static has ... }
+        async def add_item() -> None {
+            result = root spawn AddItem(name=input_val);
+            items = items + [result.reports[0]] if result.reports else items;
+            input_val = "";
+        }
+
+        transform = lambda x: str -> str : x.upper();
+
+        return <div>
+            <h1>Items</h1>
+            <input value={input_val} onChange={lambda e: any -> None : (input_val := e.target.value)} />
+            <button onClick={add_item}>Add</button>
+            <ul>
+                {[<li key={item["id"]}>{transform(item["name"])}</li> for item in items]}
+            </ul>
+        </div>;
+    }
+}
+
+PATTERN 2: WALKER GRAPH TRAVERSAL (visit/report, typed traversal, disconnect)
+
+node Person { has name: str; has age: int = 0; }
+node City { has name: str; }
+edge Friend { has since: int = 2020; }
+edge LivesIn { has years: int = 1; }
+
+walker SocialQuery {
+    has results: list = [];
+
+    can start with `root entry {
+        visit [-->];
+    }
+
+    can check_person with Person entry {
+        # Typed traversal: only Friend edges
+        friends = [->:Friend:->];
+        # Edge attr filter: recent friends
+        recent = [->:Friend:since > 2022:->];
+        # Chained typed traversal: friends' cities
+        friend_cities = [here->:Friend:->->:LivesIn:->];
+
+        self.results.append({
+            "name": here.name,
+            "friend_count": len(friends),
+            "recent_friends": len(recent)
+        });
+
+        visit [->:Friend:->];
+    }
+
+    can finish with `root exit {
+        report self.results;
+    }
+}
+
+walker Cleanup {
+    can start with `root entry {
+        for n in [-->] {
+            root del--> n;
+        }
+        report "cleaned";
+    }
+}
+
+with entry {
+    alice = (root ++> Person(name="Alice", age=30))[0];
+    bob = (root ++> Person(name="Bob", age=25))[0];
+    sf = (root ++> City(name="SF"))[0];
+    alice +>: Friend(since=2023) :+> bob;
+    alice +>: LivesIn(years=5) :+> sf;
+
+    result = root spawn SocialQuery();
+    print(result.reports);
+
+    match len(result.reports[0]) {
+        case 0: print("no results");
+        case 1: print("one person");
+        case _: print("multiple people");
+    }
+}
+
+PATTERN 3: API ENDPOINT WITH SPECS (match/case, __specs__, error handling)
+
+node Task { has id: str; has title: str; has status: str = "pending"; }
+edge TaskEdge { }
+
+walker CreateTask {
+    has title: str;
+    has priority: str = "medium";
+
+    obj __specs__ {
+        static has methods: list = ["POST"];
+        static has auth: bool = True;
+        static has path_prefix: str = "/api/v1";
+    }
+
+    can create with `root entry {
+        try {
+            match self.priority {
+                case "high": order = 1;
+                case "medium": order = 2;
+                case "low": order = 3;
+                case _: order = 2;
+            }
+            root +>: TaskEdge() :+> (task := Task(id="t1", title=self.title, status="pending"));
+            report {"id": task.id, "title": task.title, "order": order};
+        } except Exception as e {
+            report {"error": str(e)};
+        }
+    }
+}
+
+walker GetTasks {
+    obj __specs__ {
+        static has methods: list = ["GET"];
+        static has auth: bool = True;
+    }
+
+    can fetch with `root entry {
+        tasks: list = [];
+        for t in [->:TaskEdge:->] {
+            tasks.append({"id": t.id, "title": t.title, "status": t.status});
+        }
+        report tasks;
+    }
+}
+
+walker UpdateStatus {
+    has task_id: str;
+    has new_status: str;
+
+    obj __specs__ {
+        static has methods: list = ["PUT"];
+        static has auth: bool = True;
+    }
+
+    can update with `root entry {
+        for t in [->:TaskEdge:->] {
+            if t.id == self.task_id {
+                match self.new_status {
+                    case "done": t.status = "done";
+                    case "pending": t.status = "pending";
+                    case "active": t.status = "active";
+                    case _: t.status = "pending";
+                }
+                report {"id": t.id, "status": t.status};
+                disengage;
+            }
+        }
+        report {"error": "not found"};
+    }
+}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+QUICK REFERENCE: COMMON ERRORS
+
+WRONG: entry { } → RIGHT: with entry { }
+WRONG: jac serve f.jac → RIGHT: jac start f.jac
+WRONG: a ++> E() ++> b → RIGHT: a +>: E() :+> b
+WRONG: [-->:E:] → RIGHT: [->:E:->]
+WRONG: [-->:E1:->-->:E2:->] → RIGHT: [->:E1:->->:E2:->]
+WRONG: del a --> b → RIGHT: a del--> b
+WRONG: case 1 { stmt; } → RIGHT: case 1: stmt;
+WRONG: catch Error { } → RIGHT: except Error as e { }
+WRONG: str? → RIGHT: str | None
+WRONG: true/false → RIGHT: True/False
+WRONG: lambda x: T -> T { expr } → RIGHT: lambda x: T -> T { return expr; }
+WRONG: a, b = func() → RIGHT: (a, b) = func();
+WRONG: __specs__ = {"methods": []} → RIGHT: obj __specs__ { static has methods: list = []; }
+WRONG: items = items + other → RIGHT: items.extend(other);
+WRONG: pass → RIGHT: {} or # comment
+WRONG: for i, x in enumerate(l) { } → RIGHT: for (i, x) in enumerate(l) { }
+
+OPERATOR QUICK TABLE
+
+++> untyped connect (returns list); <++> bidirectional
++>: E() :+> typed forward connect; <+: E() :<+ typed backward connect
+del--> disconnect; del<-- backward disconnect
+[-->] untyped forward traversal; [<--] backward
+[->:E:->] typed forward traversal; [<-:E:<-] typed backward
+spawn start walker; visit move walker; report collect value
+disengage stop walker; skip next node
+|> pipe operator; := walrus operator

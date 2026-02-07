@@ -49,6 +49,7 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - Walrus: root +>: E() :+> (end := A(val=10)); inline assignment with :=
 - Backward typed connect: a <+: E() :<+ b; backward typed uses <+: and :<+
 - Booleans RUNTIME: true/false pass syntax check but FAIL at runtime. ALWAYS use True/False.
+- List concat: items = items + other; fails type check (__add__ overload). Use items.extend(other); or direct assignment instead.
 
 TOPICS (cover all concisely):
 
