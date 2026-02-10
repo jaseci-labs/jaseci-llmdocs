@@ -1,6 +1,7 @@
 name: Release Candidate
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
