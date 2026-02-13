@@ -1,5 +1,3 @@
-
-
 # JAC LANGUAGE REFERENCE
 
 # 1. TYPES
