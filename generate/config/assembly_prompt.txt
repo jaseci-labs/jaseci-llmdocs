@@ -17,7 +17,7 @@ Example: code
 (Optional) Common error: wrong -> right
 
 HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
-- CLI: jac start file.jac (not jac serve, serve does not exist); jac check file.jac to validate syntax
+- CLI: jac start file.jac (not jac serve, serve does not exist); jac check file.jac to validate syntax (note: jac check can be unreliable -- it may report false positives or miss real errors; passing jac check does not guarantee correctness at runtime, and failing jac check does not always mean the code is wrong)
 - Top-level: only declarations (imports, globs, archetypes, functions, tests) allowed at module top level. Executable statements like print("x"); MUST go inside with entry { } or a function body. Bare statements at top level cause parse errors.
 - Entry: with entry { } not entry { }
 - Spawn: BOTH forms valid: root spawn Walker(); AND Walker() spawn root; (use root or a variable, NEVER bare keyword node -- node is a keyword)
@@ -30,6 +30,9 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - :pub walker root access: :pub walkers run as anonymous with READ-ONLY access to root. Graph writes (here +>: E() :+> Node()) silently fail when here is root in a :pub walker. Workaround: use Jac's built-in auth for walkers that need write access, or store data in JWT payloads.
 - Custom auth pattern: if using custom auth (OAuth, JWT), make ALL walkers :pub and handle auth checks manually inside the walker body. Jac's built-in auth is separate from custom auth.
 - Methods: use can for abilities (with entry/exit), use def for regular methods
+- Root type in abilities: use Root (capital R) in event clauses: can act with Root entry { }. The backtick type operator (`root) is REMOVED. root (lowercase) for the root instance (root spawn, root ++>) is unchanged. Union types: can act with Root | MyNode entry { }
+- Filter comprehensions: [-->](?:Type) for type filter; [-->](?:Type, attr==val) for typed filter with condition. Old syntax (`?Type) and (`?Type:condition) are REMOVED. Use comma separator, not colon. Untyped attribute filter [-->](?attr > val) still valid. COMMON ERRORS table must include (`?Type) -> (?:Type) change.
+- CLI changes: jac create myapp --use client (not --use fullstack or --cl); jac add pkg --npm (not --cl); jac install syncs ALL deps (Python + npm); jac start --scale (no -t flag)
 - Optionals: str | None, not str?
 - Booleans: True/False capitalized, not true/false
 - Docstrings: before declarations, not inside function bodies
@@ -98,9 +101,9 @@ TOPICS (cover all concisely):
 
 6. ACCESS: has:priv f: T; has :pub f: T; def:pub m() { }; can:protect h with entry { }; only :pub :priv :protect; both has:priv and has :priv are valid
 
-7. GRAPH: a ++> b (untyped connect); a <++> b (bidirectional); a +>: Edge() :+> b (typed forward connect); a <+: Edge() :<+ b (typed backward connect); a del--> b (disconnect, del attaches to arrow); [-->] forward traversal; [<--] back; [->:E:->] typed traversal (uses ->: :-> brackets); [<-:E:<-] typed backward; [->:E1:->->:E2:->] chained; [-->(`?Node)] filter type; [-->](?attr>v) filter attr; [->:E:attr > val:->] edge attr filter; TRAVERSAL FROM VARIABLE: [node_var -->] or [node_var ->:E:->] traverses from a specific node (not just here); walrus in connect: root +>: E() :+> (end := A()); visit : 0 : [-->] (indexed visit). Wrong: a ++> Edge() ++> b; [-->:E:]; del a --> b;
+7. GRAPH: a ++> b (untyped connect); a <++> b (bidirectional); a +>: Edge() :+> b (typed forward connect); a <+: Edge() :<+ b (typed backward connect); a del--> b (disconnect, del attaches to arrow); [-->] forward traversal; [<--] back; [->:E:->] typed traversal (uses ->: :-> brackets); [<-:E:<-] typed backward; [->:E1:->->:E2:->] chained; [-->](?:Node) filter type; [-->](?attr>v) filter attr; [->:E:attr > val:->] edge attr filter; TRAVERSAL FROM VARIABLE: [node_var -->] or [node_var ->:E:->] traverses from a specific node (not just here); walrus in connect: root +>: E() :+> (end := A()); visit : 0 : [-->] (indexed visit). Wrong: a ++> Edge() ++> b; [-->:E:]; del a --> b;
 
-8. ABILITIES: can name with Type entry { } or exit { }; always requires with...entry/exit; use def for regular methods; self=instance here=node visitor=walker props=walker_props root=user_root `root=root_type
+8. ABILITIES: can name with Type entry { } or exit { }; always requires with...entry/exit; use def for regular methods; self=instance here=node visitor=walker props=walker_props root=user_root Root=root_type
 
 9. WALKERS: root spawn Walker(); OR Walker() spawn root; (both valid, use root or a variable, never bare keyword node); visit [-->]; visit [-->] else { }; visit [->:E:->]; report val; disengage; skip; result.reports for collected
 
@@ -108,7 +111,7 @@ TOPICS (cover all concisely):
 
 11. FILE_JSON: f=file.open(p,"r"); f.read(); f.write(s); f.close(); json.dumps(data); json.loads(s) (NEVER use obj as variable name, it is a keyword)
 
-12. API: jac start file.jac; walker becomes endpoint; walker :pub W { has d: str; obj __specs__ { static has methods: list=["GET"]; static has path_prefix: str="/api"; } can h with `root entry { report {"k":v}; } }; :pub makes walker public (no auth) but :pub walkers have READ-ONLY root access (graph writes silently fail); without :pub, auth required (Jac built-in: /user/register, /user/login for tokens); for custom auth (OAuth/JWT): make all walkers :pub, handle auth manually inside walker; __specs__ controls methods/path only, NOT auth; wrong: static has auth: bool=False; in __specs__ (does nothing)
+12. API: jac start file.jac; walker becomes endpoint; walker :pub W { has d: str; obj __specs__ { static has methods: list=["GET"]; static has path_prefix: str="/api"; } can h with Root entry { report {"k":v}; } }; :pub makes walker public (no auth) but :pub walkers have READ-ONLY root access (graph writes silently fail); without :pub, auth required (Jac built-in: /user/register, /user/login for tokens); for custom auth (OAuth/JWT): make all walkers :pub, handle auth manually inside walker; __specs__ controls methods/path only, NOT auth; wrong: static has auth: bool=False; in __specs__ (does nothing)
 
 13. WEBSOCKET: obj __specs__ { static has methods: list=["websocket"]; }; socket.notify_users(ids,msg); socket.notify_channels(names,msg)
 
@@ -130,11 +133,11 @@ TOPICS (cover all concisely):
 
 22. JAC.TOML (project config): [project] name version description entry-point="main.jac"; [dependencies] requests=">=2.28.0"; [dependencies.npm] jac-client-node="1.0.4"; [dependencies.npm.dev] "@jac-client/dev-deps"="1.0.0"; [dev-dependencies] watchdog=">=3.0.0"; [serve] port=8000 base_route_app="app" (serves client app at / instead of API info); [plugins.client] port=5173; [build] dir=".jac"; [scripts] dev="jac run main.jac"
 
-23. FULLSTACK SETUP: jac create myapp --use fullstack (scaffolds project); jac install (Python deps); jac start auto-installs npm deps from jac.toml; jac add --npm lodash (adds to jac.toml and installs); NEVER run npm install or bun install in .jac/client/ directly (corrupts managed tree); ENTRY POINT: main.jac has sv{} block importing server walkers + cl{} block with def:pub app() -> any matching base_route_app in jac.toml; .cl.jac files auto-compiled to .jac/client/compiled/ (do NOT include via include); include in __init__.jac: use full dotted paths (include pkg.module;) -- short paths pass jac check but fail at runtime; .jac/ directory is fully auto-generated (never modify manually, files get wiped on regen); Tailwind v4: add tailwindcss and @tailwindcss/postcss to [dependencies.npm], place postcss.config.js at .jac/client/postcss.config.js (Vite root, not project root)
+23. FULLSTACK SETUP: jac create myapp --use client (scaffolds project); jac install (syncs all deps); jac start auto-installs npm deps from jac.toml; jac add --npm lodash (adds to jac.toml and installs); NEVER run npm install or bun install in .jac/client/ directly (corrupts managed tree); ENTRY POINT: main.jac has sv{} block importing server walkers + cl{} block with def:pub app() -> any matching base_route_app in jac.toml; .cl.jac files auto-compiled to .jac/client/compiled/ (do NOT include via include); include in __init__.jac: use full dotted paths (include pkg.module;) -- short paths pass jac check but fail at runtime; .jac/ directory is fully auto-generated (never modify manually, files get wiped on regen); Tailwind v4: add tailwindcss and @tailwindcss/postcss to [dependencies.npm], place postcss.config.js at .jac/client/postcss.config.js (Vite root, not project root)
 
 24. DEV SERVER: jac start --dev (HMR mode); --port is main dev port (Vite frontend, default 8000); --api_port is backend API (default 8001, proxied via Vite); --no-client skips client bundling (API only); browser opens port 8000; /walker/* /function/* /user/* auto-proxied to API; file watcher monitors .jac files for hot reload
 
-25. DEPLOY: docker: FROM python:3.11-slim; pip install jaclang; jac start main.jac; jac start --scale -t kubernetes (requires -t flag for target); env: DATABASE_URL JAC_SECRET_KEY OPENAI_API_KEY
+25. DEPLOY: docker: FROM python:3.11-slim; pip install jaseci (full install with all plugins; jaclang is minimal compiler-only); jac start main.jac; jac start --scale; env: DATABASE_URL JAC_SECRET_KEY OPENAI_API_KEY
 
 26. ENV_LOADING: jac start does NOT auto-load .env files; import from dotenv { load_dotenv }; glob _dotenv_loaded: bool = load_dotenv() or True; (glob trick runs at module load since top-level statements not allowed); then use import from os { getenv }; val = getenv("MY_VAR"); requires python-dotenv in [dependencies] in jac.toml
 
@@ -150,7 +153,7 @@ EXTRACTED CONTENT:
 
 ---
 
-VERIFIED SYNTAX EXAMPLES (all pass jac check v0.9.13 -- use these as ground truth):
+VERIFIED SYNTAX EXAMPLES (use these as ground truth):
 
 # Typed edge connect
 node A { has val: int = 0; }
@@ -187,8 +190,12 @@ with entry { root +>: E() : weight=0.5 :+> A(val=1); }
 # Edge filter by attribute
 with entry { items = [->:Friend:since > 2020:->]; }
 
+# Filter comprehension (new syntax: (?:Type) not (`?Type))
+node MyNode { has name: str; has age: int = 0; }
+with entry { all_nodes = [-->](?:MyNode); adults = [-->](?:MyNode, age > 18); }
+
 # Walker with typed visit
-walker W { can go with `root entry { visit [->:E:->]; } }
+walker W { can go with Root entry { visit [->:E:->]; } }
 
 # Backward typed connect
 with entry { a = root ++> A(val=1); b = root ++> A(val=2); a[0] <+: E(weight=0.5) :<+ b[0]; }
@@ -207,7 +214,7 @@ obj Animal { has name: str; def speak() -> str { return "..."; } }
 obj Dog(Animal) { def speak() -> str { return "Woof!"; } }
 
 # Impl block (separate declaration from implementation)
-walker Creator { can create with `root entry; }
+walker Creator { can create with Root entry; }
 impl Creator.create { print("created"); }
 
 # Postinit
@@ -217,7 +224,7 @@ obj MyObj { has x: int = 0; has y: int by postinit; def postinit { self.y = self
 with entry { root +>: E() :+> (end := A(val=10)); }
 
 # Visit with index
-walker WI { can go with `root entry { visit : 0 : [-->]; } }
+walker WI { can go with Root entry { visit : 0 : [-->]; } }
 
 # f-string
 with entry { name = "World"; print(f"Hello {name}!"); }
@@ -306,7 +313,7 @@ with entry { items: list = [{"v": 2.0}, {"v": 1.0}]; items.sort(key=lambda x: di
 # root spawn sends POST -- walker must allow POST and be :pub for no-auth access
 # walker :pub MyWalker {
 #     obj __specs__ { static has methods: list = ["POST"]; } # MUST include POST for client spawn
-#     can run with `root entry { report "ok"; }
+#     can run with Root entry { report "ok"; }
 # }
 # WRONG: static has auth: bool = False; # auth field in __specs__ does nothing
 # RIGHT: walker :pub MyWalker { } # :pub controls auth, not __specs__
@@ -320,18 +327,18 @@ with entry { items: list = [{"v": 2.0}, {"v": 1.0}]; items.sort(key=lambda x: di
 # :pub walker -- public but READ-ONLY root access
 # walker :pub ReadOnly {
 #     obj __specs__ { static has methods: list = ["GET", "POST"]; }
-#     can read with `root entry { report [-->]; } # OK: reads work
+#     can read with Root entry { report [-->]; } # OK: reads work
 # }
 # WRONG: graph writes silently fail in :pub walker when here is root
 # walker :pub WriteAttempt {
-#     can write with `root entry { here +>: E() :+> Node(); } # Silently fails!
+#     can write with Root entry { here +>: E() :+> Node(); } # Silently fails!
 # }
 # For write access: use Jac built-in auth (walker without :pub + auth token)
 
 # Custom auth: make all walkers :pub, check auth manually
 # walker :pub SecureEndpoint {
 #     has token: str = "";
-#     can handle with `root entry {
+#     can handle with Root entry {
 #         if not verify_jwt(self.token) { report {"error": "unauthorized"}; disengage; }
 #         report {"data": "secret"};
 #     }
@@ -377,11 +384,11 @@ val |> func; # Pipe operator
 node Person {
     has name: str;
     has age: int = 0;
-    can greet with `root entry { print("Hi"); }
+    can greet with Root entry { print("Hi"); }
 }
 walker W {
     has visited: list[node] = [];
-    can move with `root entry { visit [-->]; }
+    can move with Root entry { visit [-->]; }
 }
 edge Friend { has since: int; }
 
