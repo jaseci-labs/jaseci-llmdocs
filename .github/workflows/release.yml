@@ -38,7 +38,7 @@ jobs:
         run: |
           gh release create "${{ steps.version.outputs.version }}" \
             release/candidate.txt \
-            --title "Jac Language Reference ${{ steps.version.outputs.version }}" \
+            --title "llmdocs ${{ steps.version.outputs.version }}" \
             --notes "Auto-generated release from candidate.txt update.
 
           Commit: ${{ github.sha }}
