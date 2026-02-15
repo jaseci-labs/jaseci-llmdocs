@@ -10,9 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .runner import PipelineRunner
-from ..pipeline.sources import SourceManager, Source, SourceType
-from ..pipeline.validator import Validator
-from ..pipeline.docs_validator import OfficialDocsValidator
+from ..sources import SourceManager, Source, SourceType
+from ..code_validator import Validator
+from ..syntax_validator import SyntaxValidator
 
 
 class SourceCreate(BaseModel):
@@ -278,7 +278,7 @@ async def validate_output():
     text = output_path.read_text()
 
     validator = Validator()
-    docs_validator = OfficialDocsValidator()
+    docs_validator = SyntaxValidator()
 
     jac_results = validator.validate_all_examples(text)
 
@@ -327,7 +327,7 @@ async def validate_output():
 @app.get("/api/validate/docs-info")
 async def get_docs_info():
     """Get information about loaded official docs for debugging."""
-    docs_validator = OfficialDocsValidator()
+    docs_validator = SyntaxValidator()
     return docs_validator.get_docs_summary()
 
 

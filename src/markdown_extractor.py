@@ -6,7 +6,6 @@ Categorizes code blocks and signatures by construct type.
 """
 
 import re
-import yaml
 from pathlib import Path
 from dataclasses import dataclass, field
 from collections import defaultdict
@@ -33,7 +32,7 @@ class ExtractedContent:
     total_signatures: int = 0
 
 
-class DeterministicExtractor:
+class MarkdownExtractor:
     """Extracts content without LLM - purely deterministic."""
 
     CONSTRUCT_PATTERNS = {
@@ -76,17 +75,10 @@ class DeterministicExtractor:
     def __init__(self, config: dict = None):
         self.config = config or {}
         self.docs_validator = None
-        root = Path(__file__).parents[2]
-        template_path = root / "config" / "reference_template.yaml"
-        if template_path.exists():
-            with open(template_path) as f:
-                self.template = yaml.safe_load(f)
-        else:
-            self.template = {'sections': [], 'keywords': {'critical': self.CRITICAL_KEYWORDS}}
 
         try:
-            from .docs_validator import OfficialDocsValidator
-            self.docs_validator = OfficialDocsValidator()
+            from .syntax_validator import SyntaxValidator
+            self.docs_validator = SyntaxValidator()
         except ImportError:
             pass
 

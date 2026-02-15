@@ -13,12 +13,12 @@ from datetime import datetime
 
 import tiktoken
 
-from ..pipeline.llm import LLM
-from ..pipeline.sanitizer import Sanitizer
-from ..pipeline.deterministic_extractor import DeterministicExtractor
-from ..pipeline.assembler import Assembler
-from ..pipeline.validator import Validator, JacCheckResult, ValidationError
-from ..pipeline.docs_validator import OfficialDocsValidator
+from ..llm import LLM
+from ..sanitizer import Sanitizer
+from ..markdown_extractor import MarkdownExtractor
+from ..assembler import Assembler
+from ..code_validator import Validator, JacCheckResult, ValidationError
+from ..syntax_validator import SyntaxValidator
 
 
 @dataclass
@@ -298,7 +298,7 @@ class PipelineRunner:
             progress_cb = self._make_progress_callback("extract")
             progress_cb(0, 3, "Initializing extractor...")
 
-            extractor = DeterministicExtractor(self.cfg)
+            extractor = MarkdownExtractor(self.cfg)
 
             progress_cb(1, 3, "Extracting signatures and examples...")
             extracted = await asyncio.to_thread(
@@ -356,7 +356,7 @@ class PipelineRunner:
         try:
             # Get extracted content
             if not hasattr(self, '_extracted_content'):
-                extractor = DeterministicExtractor(self.cfg)
+                extractor = MarkdownExtractor(self.cfg)
                 self._extracted_content = extractor.extract_from_directory(self.sanitized_dir)
                 self._extractor = extractor
 
@@ -454,7 +454,7 @@ class PipelineRunner:
             })
 
             progress_cb(1, 3, "Verifying syntax patterns...")
-            docs_validator = OfficialDocsValidator()
+            docs_validator = SyntaxValidator()
             syntax_verification = docs_validator.validate_syntax_in_output(result)
             syntax_results = {
                 v.construct: {
@@ -499,7 +499,7 @@ class PipelineRunner:
             }
 
             # Save validation results as JSON
-            validation_json_path = release_dir / "jac-llmdocs.validation.json"
+            validation_json_path = self.root / "jac-llmdocs.validation.json"
             validation_json_path.write_text(json.dumps(self.final_validation, indent=2))
 
             stage.extra = {

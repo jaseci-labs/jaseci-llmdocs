@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 from .sources import SourceManager, SourceType
-from .jaclang_extractor import JaclangExtractor
+from .jac_extractor import JacExtractor
 
 
 EXCLUDE_PATTERNS = [
@@ -28,7 +28,7 @@ class Sanitizer:
         self.min_content_length = 200
         config_path = Path(__file__).parents[2] / "config" / "config.yaml"
         self.source_manager = SourceManager(config_path)
-        self.jaclang_extractor = JaclangExtractor(config)
+        self.jac_extractor = JacExtractor(config)
 
     def should_exclude(self, path: Path) -> bool:
         parts = set(path.parts)
@@ -161,12 +161,12 @@ class Sanitizer:
                     })
 
             if source.source_type in (SourceType.JAC, SourceType.BOTH):
-                ast_results = self.jaclang_extractor.process_directory(source_dir)
+                ast_results = self.jac_extractor.process_directory(source_dir)
                 stats["jac_files"] += ast_results["totals"]["files"]
                 stats["jac_definitions"] += len(ast_results["all_definitions"])
 
                 if ast_results["all_definitions"]:
-                    skeleton = self.jaclang_extractor.generate_skeleton(ast_results)
+                    skeleton = self.jac_extractor.generate_skeleton(ast_results)
                     skeleton_path = out_dir / f"{source_id}_jac_skeleton.md"
                     skeleton_path.write_text(skeleton, encoding='utf-8')
 
@@ -195,7 +195,7 @@ class Sanitizer:
             file_path = out_dir / file_info["path"]
             try:
                 content = file_path.read_text(encoding='utf-8')
-                definitions = self.jaclang_extractor.extract_from_markdown(content)
+                definitions = self.jac_extractor.extract_from_markdown(content)
                 all_definitions.extend(definitions)
             except Exception:
                 continue
@@ -206,7 +206,7 @@ class Sanitizer:
                 "totals": {"files": len([f for f in stats["files"] if f["type"] == "docs"])}
             }
 
-            skeleton = self.jaclang_extractor.generate_skeleton(results)
+            skeleton = self.jac_extractor.generate_skeleton(results)
             skeleton_path = out_dir / "docs_jac_skeleton.md"
             skeleton_path.write_text(skeleton, encoding='utf-8')
 

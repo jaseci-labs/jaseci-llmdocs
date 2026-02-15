@@ -245,7 +245,7 @@ def _extract_params_str(sig) -> Optional[str]:
     return ", ".join(parts) if parts else None
 
 
-class JaclangExtractor:
+class JacExtractor:
     """AST-based extractor using jaclang's JacCompiler."""
 
     ARCH_TYPE_MAP = {

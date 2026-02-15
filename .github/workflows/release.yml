@@ -40,7 +40,7 @@ jobs:
           old="${{ steps.version_check.outputs.current }}"
           mkdir -p "release/$old"
           [ -f release/jac-llmdocs.md ] && cp release/jac-llmdocs.md "release/$old/jac-llmdocs.md"
-          [ -f release/jac-llmdocs.validation.json ] && cp release/jac-llmdocs.validation.json "release/$old/jac-llmdocs.validation.json"
+          [ -f jac-llmdocs.validation.json ] && cp jac-llmdocs.validation.json "release/$old/jac-llmdocs.validation.json"
           echo "${{ steps.version_check.outputs.base }}" > release/VERSION
           echo "Archived release/$old/"
 

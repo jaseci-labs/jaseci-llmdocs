@@ -9,7 +9,7 @@ Supports optional RAG integration for smarter content/rule retrieval.
 import re
 from pathlib import Path
 from .llm import LLM
-from .deterministic_extractor import DeterministicExtractor, ExtractedContent
+from .markdown_extractor import MarkdownExtractor, ExtractedContent
 
 
 class Assembler:
@@ -27,13 +27,13 @@ class Assembler:
         with open(prompt_path) as f:
             self.prompt_template = f.read()
 
-    def assemble(self, extracted: ExtractedContent, extractor: DeterministicExtractor) -> str:
+    def assemble(self, extracted: ExtractedContent, extractor: MarkdownExtractor) -> str:
         """Assemble final document from extracted content in single LLM call."""
         if self.rag_retriever is not None:
             return self._assemble_with_rag(extracted, extractor)
         return self._assemble_monolithic(extracted, extractor)
 
-    def _assemble_monolithic(self, extracted: ExtractedContent, extractor: DeterministicExtractor) -> str:
+    def _assemble_monolithic(self, extracted: ExtractedContent, extractor: MarkdownExtractor) -> str:
         """Original monolithic assembly path (unchanged)."""
         self.on_progress(0, 2, "Formatting extracted content...")
 
@@ -54,7 +54,7 @@ class Assembler:
 
         return result
 
-    def _assemble_with_rag(self, extracted: ExtractedContent, extractor: DeterministicExtractor) -> str:
+    def _assemble_with_rag(self, extracted: ExtractedContent, extractor: MarkdownExtractor) -> str:
         """RAG-enhanced assembly: retrieves relevant rules + MMR examples."""
         self.on_progress(0, 3, "Retrieving relevant rules and examples via RAG...")
 
@@ -82,7 +82,7 @@ class Assembler:
 
         return result
 
-    def _build_rag_prompt(self, extracted: ExtractedContent, extractor: DeterministicExtractor, retrieval: dict) -> str:
+    def _build_rag_prompt(self, extracted: ExtractedContent, extractor: MarkdownExtractor, retrieval: dict) -> str:
         """Build a focused prompt using RAG-retrieved rules and examples."""
         template = self.prompt_template
 
@@ -172,7 +172,7 @@ class LosslessPipeline:
         with open(config_path) as f:
             self.config = yaml.safe_load(f)
 
-        self.extractor = DeterministicExtractor(self.config)
+        self.extractor = MarkdownExtractor(self.config)
         self.llm = LLM(self.config, self.config.get('assembly', {}))
         self.assembler = Assembler(self.llm, self.config)
         self.validator = Validator()

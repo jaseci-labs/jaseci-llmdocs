@@ -16,12 +16,12 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
-from src.pipeline.sanitizer import Sanitizer
-from src.pipeline.deterministic_extractor import DeterministicExtractor
-from src.pipeline.assembler import Assembler
-from src.pipeline.llm import LLM
-from src.pipeline.validator import Validator
-from src.pipeline.docs_validator import OfficialDocsValidator
+from src.sanitizer import Sanitizer
+from src.markdown_extractor import MarkdownExtractor
+from src.assembler import Assembler
+from src.llm import LLM
+from src.code_validator import Validator
+from src.syntax_validator import SyntaxValidator
 
 
 def load_config():
@@ -66,7 +66,7 @@ def run_extract(config, quiet=False):
     t0 = time.time()
 
     sanitized_dir = ROOT / "output" / "0_sanitized"
-    extractor = DeterministicExtractor(config)
+    extractor = MarkdownExtractor(config)
     extracted = extractor.extract_from_directory(sanitized_dir)
 
     duration = time.time() - t0
@@ -117,7 +117,7 @@ def init_rag(config, extracted, quiet=False):
         return None
 
     try:
-        from src.pipeline.rag import RAGRetriever
+        from src.rag import RAGRetriever
 
         retriever = RAGRetriever(config)
         if not retriever.available:
@@ -168,7 +168,7 @@ def check_version_and_archive(quiet=False):
         archive_dir = release_dir / current
         archive_dir.mkdir(parents=True, exist_ok=True)
         candidate = release_dir / "jac-llmdocs.md"
-        validation = release_dir / "jac-llmdocs.validation.json"
+        validation = ROOT / "jac-llmdocs.validation.json"
         if candidate.exists():
             (archive_dir / "jac-llmdocs.md").write_text(candidate.read_text())
         if validation.exists():
@@ -241,7 +241,7 @@ def run_validate(text, quiet=False):
 
     strict_result = validator.validate_strict(text, fail_on_error=False, on_progress=strict_progress)
 
-    docs_validator = OfficialDocsValidator()
+    docs_validator = SyntaxValidator()
     syntax_verification = docs_validator.validate_syntax_in_output(text)
     incorrect_syntax = [v for v in syntax_verification if not v.matches_docs and v.found_in_output]
     all_syntax_correct = len(incorrect_syntax) == 0
@@ -283,9 +283,7 @@ def run_validate(text, quiet=False):
         "recommendation": recommendation,
     }
 
-    release_dir = ROOT / "release"
-    release_dir.mkdir(exist_ok=True)
-    (release_dir / "jac-llmdocs.validation.json").write_text(json.dumps(validation_data, indent=2))
+    (ROOT / "jac-llmdocs.validation.json").write_text(json.dumps(validation_data, indent=2))
 
     return validation_data
 

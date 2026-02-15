@@ -26,7 +26,7 @@ class SyntaxVerification:
     doc_example: str | None = None
 
 
-class OfficialDocsValidator:
+class SyntaxValidator:
     """Cross-references generated content against official Jac docs."""
 
     OFFICIAL_DOCS_PATH = Path.home() / "jaseci/docs/docs/reference/language"
