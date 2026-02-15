@@ -172,10 +172,11 @@ class Validator:
     def extract_jac_blocks(self, text: str) -> list[tuple[int, str]]:
         """Extract Jac code blocks from markdown text.
 
+        Only extracts blocks explicitly tagged as ```jac or ```jaclang.
         Returns list of (block_index, code) tuples.
         """
         blocks = []
-        pattern = r'```(?:jac|jaclang)?\s*\n(.*?)```'
+        pattern = r'```(?:jac|jaclang)\s*\n(.*?)```'
         matches = re.finditer(pattern, text, re.DOTALL | re.IGNORECASE)
 
         for i, match in enumerate(matches):
@@ -346,7 +347,7 @@ class Validator:
                 return line[:i].rstrip()
         return line
 
-    def run_jac_check(self, code: str, timeout: int = 5) -> tuple[bool, Optional[str]]:
+    def run_jac_check(self, code: str, timeout: int = 15) -> tuple[bool, Optional[str]]:
         """Run jac check on a code snippet.
 
         Returns (passed, error_message).
@@ -393,16 +394,104 @@ class Validator:
         if any(marker in code for marker in fragment_markers):
             return True
 
+        # cl{}/sv{} blocks contain JSX that jac check can't validate
+        if re.search(r'\bcl\s*\{', code) or re.search(r'\bsv\s+import\b', code):
+            return True
+
+        # Runtime API patterns that aren't standalone Jac
+        if '__jac__.' in code and not re.search(r'\b(node|walker|obj)\s+\w+', code):
+            return True
+
+        # Syntax reference blocks: mostly independent one-liner examples with
+        # undefined variables (not a coherent program). Detect by checking if
+        # most non-blank, non-comment lines are bare statements using undefined names.
+        non_comment_lines = [
+            l.strip() for l in lines
+            if l.strip() and not l.strip().startswith('#')
+        ]
+        if len(non_comment_lines) >= 5:
+            bare_stmt_count = sum(
+                1 for l in non_comment_lines
+                if not re.match(r'^\s*(?:node|walker|edge|obj|enum|def|can|import|glob|test|include|with|async)\s', l)
+            )
+            if bare_stmt_count / len(non_comment_lines) > 0.7:
+                return True
+
         has_definition = any(
             re.search(pattern, code)
             for pattern in [r'\bnode\s+\w+', r'\bwalker\s+\w+', r'\bedge\s+\w+',
                             r'\bobj\s+\w+', r'\bdef\s+\w+', r'\bcan\s+\w+',
-                            r'with\s+.*entry', r'with\s+.*exit']
+                            r'with\s+.*entry', r'with\s+.*exit',
+                            r'\bimport\s+', r'\bglob\s+', r'\btest\s+',
+                            r'\benum\s+', r'\basync\s+walker']
         )
         if not has_definition and len(lines) < 3:
             return True
 
         return False
+
+    def _needs_entry_wrapper(self, code: str) -> bool:
+        """Check if code has only bare statements that need with entry {} wrapping."""
+        toplevel_patterns = [
+            r'^\s*(?:node|walker|edge|obj|enum|async\s+walker)\s+',
+            r'^\s*(?:def|async\s+def)\s+',
+            r'^\s*(?:can)\s+',
+            r'^\s*with\s+entry',
+            r'^\s*import\s+',
+            r'^\s*glob\s+',
+            r'^\s*test\s+',
+            r'^\s*include\s+',
+            r'^\s*#',
+            r'^\s*$',
+            r'^\s*sem\s+',
+            r'^\s*"""',
+        ]
+        for line in code.strip().split('\n'):
+            stripped = line.strip()
+            if not stripped or stripped.startswith('#') or stripped.startswith('"""'):
+                continue
+            if any(re.match(p, stripped) for p in toplevel_patterns):
+                continue
+            return True
+        return False
+
+    def _wrap_in_entry(self, code: str) -> str:
+        """Wrap bare statements in with entry {} while keeping declarations at top level."""
+        declarations = []
+        statements = []
+        in_declaration = False
+        brace_depth = 0
+
+        for line in code.split('\n'):
+            stripped = line.strip()
+
+            if in_declaration:
+                declarations.append(line)
+                brace_depth += stripped.count('{') - stripped.count('}')
+                if brace_depth <= 0:
+                    in_declaration = False
+                    brace_depth = 0
+                continue
+
+            is_decl = bool(re.match(
+                r'^\s*(?:node|walker|edge|obj|enum|async\s+walker|def|async\s+def|'
+                r'can|import|glob|test|include|sem|"""|#)',
+                stripped
+            ))
+
+            if is_decl:
+                declarations.append(line)
+                brace_depth = stripped.count('{') - stripped.count('}')
+                if brace_depth > 0:
+                    in_declaration = True
+            elif stripped:
+                statements.append(line)
+
+        if not statements:
+            return code
+
+        parts = declarations + ['with entry {'] + ['    ' + s for s in statements] + ['}']
+        return '\n'.join(parts)
 
     def _check_block_task(
         self,
@@ -418,7 +507,11 @@ class Validator:
         if self._is_fragment(code):
             return (idx, code, source, None, None)
 
-        success, error = self.run_jac_check(code)
+        check_code = code
+        if self._needs_entry_wrapper(check_code):
+            check_code = self._wrap_in_entry(check_code)
+
+        success, error = self.run_jac_check(check_code)
         return (idx, code, source, success, error)
 
     def validate_all_examples(

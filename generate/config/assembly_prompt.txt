@@ -1,14 +1,18 @@
 You are assembling a Jac language reference. Jac is a onelang that supersets Python/JavaScript for fullstack apps (frontend compiles to JS, backend/AI compiles to Python).
 
-TARGET: 15-20KB. Terse reference format, not prose.
+HARD TARGET: 18-22KB. You MUST stay under 22KB. Count your output size. If you exceed 22KB, you have failed.
+
+OUTPUT FORMAT: Markdown (.md file).
 
 FORMAT RULES:
 - Short declarative statements, not explanations
 - Show syntax, then example. No "as in" or "for example"
-- Group related items with semicolons
-- Code inline, no fences
+- Group related items with semicolons on ONE line
+- Use ```jac fenced code blocks for code examples and patterns
+- Inline code with backticks for syntax references in prose lines
 - One line per concept where possible
 - WRONG/RIGHT pairs: show only the code, minimal words
+- Patterns: 3 patterns max, each under 80 lines. No verbose comments.
 
 STRUCTURE EACH TOPIC:
 Topic: brief definition
@@ -17,134 +21,117 @@ Example: code
 (Optional) Common error: wrong -> right
 
 HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
-- CLI: jac start file.jac (not jac serve, serve does not exist); jac check file.jac to validate syntax (note: jac check can be unreliable -- it may report false positives or miss real errors; passing jac check does not guarantee correctness at runtime, and failing jac check does not always mean the code is wrong)
-- Top-level: only declarations (imports, globs, archetypes, functions, tests) allowed at module top level. Executable statements like print("x"); MUST go inside with entry { } or a function body. Bare statements at top level cause parse errors.
+- CLI: jac start file.jac (not jac serve); jac check file.jac (may have false positives/negatives)
+- Top-level: only declarations allowed. Executable statements MUST go inside with entry { } or a function body.
 - Entry: with entry { } not entry { }
-- Spawn: BOTH forms valid: root spawn Walker(); AND Walker() spawn root; (use root or a variable, NEVER bare keyword node -- node is a keyword)
-- Import: import from module { sym } (no semicolon after }); import module; (semicolon required for plain import). Wrong: import from math, sqrt; (comma form does not exist). No import:py or import:jac syntax exists; plain import handles both Python and Jac modules.
-- LLM: def f() -> T by llm; OR def f() -> T by llm(); both valid. by llm(temperature=0.7) for params. No import needed.
+- Spawn: BOTH forms valid: root spawn Walker(); AND Walker() spawn root; (use root or variable, NEVER bare keyword node)
+- Import: import from module { sym } (NO semicolon after }); import module; (semicolon for plain import). Wrong: import from math, sqrt; No import:py or import:jac exists.
+- LLM: def f() -> T by llm; OR by llm(); both valid. by llm(temperature=0.7) for params. No import needed.
 - Access: has:priv x OR has :priv x (both valid); only :pub :priv :protect
 - Permissions: node.__jac__.grant(root, Perm)
-- Specs: obj __specs__ { static has methods: list = [...]; } not dict literal. __specs__ controls methods/path/websocket ONLY; it does NOT control authentication.
-- Walker auth: controlled by :pub access modifier on walker declaration. walker :pub MyWalker { } is public (no auth). Without :pub, walkers require Jac built-in auth (token from /user/register or /user/login). WRONG: static has auth: bool = False; in __specs__ (auth field in __specs__ does nothing).
-- :pub walker root access: :pub walkers run as anonymous with READ-ONLY access to root. Graph writes (here +>: E() :+> Node()) silently fail when here is root in a :pub walker. Workaround: use Jac's built-in auth for walkers that need write access, or store data in JWT payloads.
-- Custom auth pattern: if using custom auth (OAuth, JWT), make ALL walkers :pub and handle auth checks manually inside the walker body. Jac's built-in auth is separate from custom auth.
-- Methods: use can for abilities (with entry/exit), use def for regular methods
-- Root type in abilities: use Root (capital R) in event clauses: can act with Root entry { }. The backtick type operator (`root) is REMOVED. root (lowercase) for the root instance (root spawn, root ++>) is unchanged. Union types: can act with Root | MyNode entry { }
-- Filter comprehensions: [-->](?:Type) for type filter; [-->](?:Type, attr==val) for typed filter with condition. Old syntax (`?Type) and (`?Type:condition) are REMOVED. Use comma separator, not colon. Untyped attribute filter [-->](?attr > val) still valid. COMMON ERRORS table must include (`?Type) -> (?:Type) change.
-- CLI changes: jac create myapp --use client (not --use fullstack or --cl); jac add pkg --npm (not --cl); jac install syncs ALL deps (Python + npm); jac start --scale (no -t flag)
+- Specs: obj __specs__ { static has methods: list = [...]; } __specs__ controls methods/path/websocket ONLY, NOT auth.
+- Walker auth: :pub on walker declaration = public (no auth). Without :pub = requires auth token. WRONG: static has auth: bool = False; in __specs__.
+- :pub walker root access: READ-ONLY. Graph writes silently fail when here is root. Use built-in auth for write access.
+- Custom auth: make ALL walkers :pub, handle auth manually inside walker body.
+- Methods: can for abilities (with entry/exit), def for regular methods
+- Root type: Root (capital R) in event clauses. Backtick `root REMOVED. Union: can act with Root | MyNode entry { }
+- Filters: [-->](?:Type); [-->](?:Type, attr==val). Old (`?Type) REMOVED. Comma separator.
+- CLI: jac create --use client (not fullstack); jac add --npm; jac install syncs all; jac start --scale (no -t)
 - Optionals: str | None, not str?
-- Booleans: True/False capitalized, not true/false
-- Docstrings: before declarations, not inside function bodies
-- Lambdas: TWO FORMS. Expression: lambda x: int -> int : x * 2; Block: lambda x: int -> int { return x * 2; }; Block form REQUIRES return statement. NEVER write lambda x: T -> T { expr } without return. Expression form body MUST be a pure expression (no assignments). For assignments use block form: lambda e: any -> None { input_val = e.target.value; }
-- Tuple unpacking: (a, b) = func(); parentheses required around left side
-- No pass keyword: use empty block {} or comment
-- Enumerate unpacking: for (i, x) in enumerate(items) { }; parentheses required
-- Match/case: match x { case 1: stmt; case _: stmt; } Cases use COLON then statements, NOT braces. Wrong: case 1 { } Right: case 1: stmt;
-- Typed edge CONNECTION: a +>: EdgeType() :+> b; uses +>: and :+> brackets. Wrong: a ++> EdgeType() ++> b. The ++> operator is ONLY for untyped connections (a ++> b).
-- Typed edge TRAVERSAL: [->:E:->] uses ->: and :-> brackets. Wrong: [-->:E:]. The --> operator is ONLY for untyped traversal [-->].
-- Chained typed traversal: [->:E1:->->:E2:->] chain pairs directly. Wrong: [-->:E1:->-->:E2:->]
-- Edge filter by attribute: [->:Friend:since > 2020:->] attribute filter inside the typed brackets
-- Disconnect: a del--> b; the del keyword attaches to the edge operator. Wrong: del a --> b;
-- Untyped connection returns list: a ++> Node() returns list; use a[0] to get single node
-- Traversal from variable node: [node_var -->] and [node_var ->:E:->] traverse from a specific node, not just here. Example: result = [city_a ->:Road:->]; This is required for any non-trivial graph program.
-- Globals in functions: glob var: T = val; declared at module level. Inside functions, access by name directly (counter += 1;). Do NOT re-declare glob inside function body (glob counter; inside a function FAILS).
-- Lambda as function argument: items.sort(key=lambda x: dict -> float : x["val"]); type annotations required even in argument position.
-- Ability names: never name abilities list/dict/str/int or other builtins; use fetch/get/handle instead
-- Try/except: try { } except TypeError as e { } finally { }; uses except not catch; braces around all blocks
-- Inheritance: obj Child(Parent) { }; walkers/nodes too: walker W(BaseW) { }; node N(BaseN) { }
-- Pipe: "hello" |> print; forward pipe operator passes left as arg to right
-- Impl blocks: impl Walker.ability { code }; separate declaration from implementation
-- Postinit: has field: T by postinit; then def postinit { self.field = computed; }
-- Walrus: root +>: E() :+> (end := A(val=10)); inline assignment with :=
-- Backward typed connect: a <+: E() :<+ b; backward typed uses <+: and :<+
-- Booleans RUNTIME: true/false pass syntax check but FAIL at runtime. ALWAYS use True/False.
-- List concat in cl{} blocks: items = items + [x] fails type check inside cl{} blocks only. Use items.append(x) or items.extend(other) instead. In regular server code items = items + [x] works fine. COMMON ERRORS table must qualify this as "in cl{} blocks".
-- Reserved keywords as variables: obj, node, walker, edge, enum, can, has are keywords. NEVER use them as variable names. Wrong: obj = json.loads(s); Right: data = json.loads(s);
-- Attribute ordering: non-default attributes MUST come before default attributes in the same archetype. Wrong: node N { has x: int = 0; has y: str; } Right: node N { has y: str; has x: int = 0; }
-- Test names: test blocks use identifiers not strings. Wrong: test "my test" { } Right: test my_test { }
-- Fullstack entry: cl{} block in main.jac must have def:pub app matching [serve] base_route_app in jac.toml. Without this, / returns 404.
-- Client file discovery: .cl.jac files are auto-compiled to .jac/client/compiled/. Do NOT include .cl.jac via include (server parser cannot handle JSX). Use cl import from .module { Component } instead.
-- jac install: creates .jac/venv/ regardless of active conda/virtualenv. This is expected behavior. jac start auto-installs npm deps from jac.toml.
-- Dev server ports: --port is Vite frontend (default 8000, open in browser); --api_port is backend API (default 8001, auto-proxied). Two separate ports in dev mode.
-- No ternary ?: operator in Jac. Use Python-style: (expr) if condition else (expr). This is the BIGGEST JSX gotcha.
-- cl{} context uses JS builtins, NOT Python. Full mapping: .length not len(); String(x) not str(x); parseInt(x) not int(x); parseFloat(x) not float(x); Math.min(a,b) not min(a,b); Math.max(a,b) not max(a,b); .trim() not .strip(); no range() (use while loop); no enumerate() (use manual index); (dict["key"] or default) not dict.get("key", default); + for string concat not f-strings; for item in [[x,y]] then item[0] not tuple unpacking; no new keyword (cannot use new URLSearchParams() etc).
-- .cl.jac files do NOT need cl{} wrapper -- the .cl.jac extension makes the file implicitly client-side.
-- Server imports in .cl.jac files need sv prefix: sv import from walkers.xxx { Walker }. Without sv, import resolves client-side and fails.
-- Lifecycle in .cl.jac: use import from react { useEffect } and useEffect(lambda -> None { ... }, []), NOT can with entry { }. The can with entry pattern compiles differently server-side vs client-side. Official templates use useEffect.
-- root spawn compiles to await __jacSpawn(). Any function containing root spawn MUST be async def. useEffect lambda MUST be non-async -- extract async work to separate async def and call from the non-async lambda.
-- CSS imports: import "./styles.css"; in .cl.jac files works (compiler copies CSS, Vite processes it).
-- .jac/ directory is fully auto-generated (_entry.js, index.html, vite.config.js, package.json). Never modify manually.
-- include in __init__.jac: use full dotted paths (include pkg.module;). Short paths pass jac check but fail at runtime.
-- root spawn failures crash the caller (no automatic error handling). Wrap in try/except in async functions.
-- root spawn ALWAYS sends POST to /walker/WalkerName. If walker's __specs__ only lists ["GET"], client gets 401. Every walker called from client MUST include "POST" in methods list.
-- className not class for JSX attributes. React 18 ignores the class prop entirely; the Jac compiler passes props through as-is with no automatic conversion.
-- npm dependencies: ALL npm packages must be declared in jac.toml [dependencies.npm] or [dependencies.npm.dev]. Install via jac add --npm. Never run npm install or bun install directly in .jac/client/ -- it corrupts the managed dependency tree.
-- PostCSS config: Vite root is .jac/client/, NOT project root. postcss.config.js must be at .jac/client/postcss.config.js for Vite to find it. Project root alone won't work.
-- Tailwind v4: @import "tailwindcss" in CSS requires @tailwindcss/postcss installed and configured. Both tailwindcss and @tailwindcss/postcss must be in jac.toml [dependencies.npm], and postcss.config.js pointing to @tailwindcss/postcss must exist in Vite root (.jac/client/).
-- .jac/ is fully auto-generated: files placed inside (like postcss.config.js) may get wiped on regeneration. The durable source of truth is jac.toml and project-root config files.
-- .env loading: jac start does NOT auto-load .env files. Add python-dotenv to [dependencies] and use glob _dotenv_loaded: bool = load_dotenv() or True; at module level (since top-level executable statements are not allowed, the glob trick runs it as a declaration).
-- Empty lambda blocks: lambda e: any -> None {} (empty body) fails in 0.9.15. Use lambda e: any -> None { 0; } as no-op.
-- Complex lambda in JSX: onChange={(props["handler"] or lambda e: any -> None { 0; })} causes parse errors in 0.9.15. Use onChange={props["handler"]} directly.
+- Booleans: True/False (true/false pass syntax but FAIL at runtime)
+- Lambdas: Expression: lambda x: int -> int : x * 2; Block: lambda x: int -> int { return x * 2; }; Block REQUIRES return. Expression cannot have assignments.
+- Tuple unpacking: (a, b) = func(); parens required
+- No pass keyword: use {} or comment
+- Enumerate: for (i, x) in enumerate(items) { }; parens required
+- Match/case: case V: stmt; (COLON not braces). Wrong: case 1 { }
+- Typed edge CONNECT: a +>: E() :+> b; Wrong: a ++> E() ++> b (++> only untyped)
+- Typed edge TRAVERSE: [->:E:->] Wrong: [-->:E:] (--> only untyped)
+- Chained: [->:E1:->->:E2:->] Wrong: [-->:E1:->-->:E2:->]
+- Edge attr filter: [->:Friend:since > 2020:->]
+- Disconnect: a del--> b; Wrong: del a --> b;
+- Untyped returns list: a ++> Node() returns list; use [0] for single
+- Variable node traversal: [node_var ->:E:->] traverses from specific node
+- Globals: glob var: T = val; at module level. Access by name in functions. WRONG: glob counter; inside function body.
+- Lambda as arg: items.sort(key=lambda x: dict -> float : x["v"]);
+- Try/except: try { } except Type as e { } finally { }; except not catch
+- Inheritance: obj Child(Parent) { }; walker W(BaseW) { }
+- Pipe: "hello" |> print;
+- Impl blocks: impl W.ability { code }
+- Postinit: has f: T by postinit; def postinit { self.f = val; }
+- Walrus: root +>: E() :+> (end := A(val=10));
+- Backward typed: a <+: E() :<+ b; [<-:E:<-]
+- List concat in cl{}: use items.append(x) not items = items + [x] (cl{} only)
+- Reserved keywords: obj node walker edge enum can has -- NEVER use as variable names
+- Attribute ordering: non-default BEFORE default. Wrong: has x: int = 0; has y: str;
+- Test names: identifiers not strings. Wrong: test "name" { }
+- Fullstack entry: cl{} def:pub app must match [serve] base_route_app in jac.toml
+- .cl.jac auto client-side (no cl{} wrapper). Do NOT include via include.
+- Dev ports: --port Vite frontend (8000); --api_port backend (8001, auto-proxied)
+- No ternary ?: -- use (expr) if cond else (expr)
+- cl{} JS builtins: .length not len(); String(x) not str(x); parseInt(x) not int(x); Math.min/max; .trim() not .strip(); no range(); no f-strings (use +); no tuple unpacking; no new keyword; className not class
+- sv import prefix for server imports in .cl.jac
+- Lifecycle: useEffect(lambda -> None { func(); }, []) not can with entry
+- root spawn compiles to await; function MUST be async def
+- root spawn sends POST; walker __specs__ MUST include "POST"
+- CSS: import "./styles.css";
+- .jac/ auto-generated, never modify manually
+- include in __init__.jac: full dotted paths (include pkg.module;)
+- npm deps: ALL in jac.toml; NEVER npm install in .jac/client/
+- Tailwind v4: tailwindcss + @tailwindcss/postcss in [dependencies.npm]
+- .env: not auto-loaded; use glob _: bool = load_dotenv() or True;
+- Empty lambda: lambda e: any -> None { 0; } not {}
+- Docstrings before declarations, not inside bodies
 
-TOPICS (cover all concisely):
+TOPICS (26 sections -- keep each CONCISE, 3-8 lines max per section):
 
-1. TYPES: int float str bool bytes any; list[T] dict[K,V] set[T]; int|None for unions; has x: type; -> return
+1. TYPES: primitives; collections; unions; has; return types; attribute ordering
+2. CONTROL: if/elif/else; for; while; match/case (colon!); try/except (not catch); no ternary; no pass
+3. FUNCTIONS: def; lambda (2 forms); pipe; f-strings; glob; top-level restriction
+4. IMPORTS: import; import from { }; include; __init__.jac; wrong forms
+5. ARCHETYPES: node; edge; walker; obj; enum; inheritance; impl; postinit; can vs def
+6. ACCESS: :pub :priv :protect
+7. GRAPH: connect (typed/untyped); disconnect; traversal (typed/untyped); filters; variable node traversal; walrus; visit indexed
+8. ABILITIES: can with entry/exit; self/here/visitor/root; Root type
+9. WALKERS: spawn; visit; report; disengage; skip
+10. BY_LLM: by llm; semstrings; sem annotations; enum classification; multi-model (Model)
+11. FILE_JSON: file.open; json.dumps/loads; keyword variable warning
+12. API: jac start; walker endpoints; __specs__; :pub auth; read-only root; custom auth
+13. WEBSOCKET: __specs__ methods=["websocket"]; async walker; ws:// endpoint; notify
+14. WEBHOOKS: __specs__ webhook; endpoint path
+15. SCHEDULER: __specs__ schedule; triggers
+16. ASYNC: async walker; async def; task status
+17. PERMISSIONS: grant/revoke/check_access; levels
+18. PERSISTENCE: auto-persist; save; commit; references; delete
+19. TESTING: test name { assert }; identifier names
+20. STDLIB: builtins; string/list/dict methods
+21. JSX/CLIENT: .cl.jac; sv import; useEffect; async def + root spawn; JS builtins; className; CSS; component def:pub; has = reactive state; JSX comprehensions; conditional rendering; form handling; component props/callbacks; routing (Router/Routes/Route/Link/Navigate/useNavigate from @jac/runtime); error/loading patterns
+22. CLIENT_AUTH: jacSignup/jacLogin/jacLogout/jacIsLoggedIn from @jac/runtime; per-user isolation
+23. JAC.TOML: all sections; tailwind config; npm deps
+24. FULLSTACK_SETUP: jac create --use client; jac install; jac add --npm; .jac/ auto-gen; project structure (main.jac wiring, walkers.jac, frontend.cl.jac, components/*.cl.jac)
+25. DEV_SERVER: jac start --dev; ports; proxy; --no-client
+26. DEPLOY_ENV: docker; jaseci vs jaclang; jac start --scale; env vars; .env loading via glob trick
 
-2. CONTROL: if cond { } elif { } else { }; for x in items { }; for i=0 to i<10 by i+=1 { }; while cond { }; match x { case V: stmt; case _: stmt; } (cases use COLON not braces); try { } except Type as e { } finally { } (uses except, not catch)
+PATTERNS (include 3 complete examples, each COMPACT -- under 80 lines):
 
-3. FUNCTIONS: def name(p: T) -> R { }; lambdas: lambda p: T -> R : expr (expression form) OR lambda p: T -> R { return expr; } (block form, MUST have return); lambda as arg: items.sort(key=lambda x: dict -> float : x["val"]); glob var: T = val; at module level, accessible by name in functions (no re-declaration needed); pipe: val |> func; f-strings: f"Hello {name}!"; only declarations at top level, executable statements must be inside with entry { } or functions
+PATTERN 1: Fullstack single-file (main.jac with sv{}/cl{})
+- Counter app: node, edge, 2 walkers (GetCount, Increment) with __specs__ and :pub
+- sv{} imports, cl{} with def:pub app, useEffect, async def, JS builtins
+- Show jac.toml. Keep cl{} block tight -- no verbose comments.
 
-4. IMPORTS: import os; import from math { sqrt }; import from datetime { datetime as dt }; include module; (include sub.module; for subpackages); packages require __init__.jac like Python's __init__.py; WRONG: import from math, sqrt; (comma form does not exist); no import:py or import:jac syntax exists
+PATTERN 2: Walker graph traversal
+- Cities/Roads graph. TWO separate focused walkers:
+  - FindReachable: Root entry visits [-->], City entry appends + visits [->:Road:->], Root exit reports
+  - DeleteRoute: takes from_city/to_city, visits filtered nodes, uses del-->
+- with entry block: creates cities, typed connects, traversal from variable node, spawn both walkers
+- Show [node_var ->:Road:->] and edge attribute filter
 
-5. ARCHETYPES: node N { has f: T; def m() { } can on_v with W entry { } }; edge E { has f: T; }; walker W { has s: T; can act with N entry { visit [-->]; } }; obj O { has f: T; def m() { } }; enum E { A, B=1 }; inheritance: obj Child(Parent) { }; impl blocks: impl W.ability { code }; postinit: has f: T by postinit; def postinit { self.f = val; }
+PATTERN 3: Multi-file fullstack CRUD with auth + AI
+- Combine the best of CRUD + auth + AI into ONE pattern (not 3 separate ones)
+- Show file structure as comments: main.jac, walkers.jac (Add/List/Toggle/Delete walkers), frontend.cl.jac (Router, auth check, data fetching, component composition)
+- Include: jacLogin/jacIsLoggedIn, sem annotations with enum, by llm(), glob llm = Model(...)
+- Keep each "file" section compact
 
-6. ACCESS: has:priv f: T; has :pub f: T; def:pub m() { }; can:protect h with entry { }; only :pub :priv :protect; both has:priv and has :priv are valid
-
-7. GRAPH: a ++> b (untyped connect); a <++> b (bidirectional); a +>: Edge() :+> b (typed forward connect); a <+: Edge() :<+ b (typed backward connect); a del--> b (disconnect, del attaches to arrow); [-->] forward traversal; [<--] back; [->:E:->] typed traversal (uses ->: :-> brackets); [<-:E:<-] typed backward; [->:E1:->->:E2:->] chained; [-->](?:Node) filter type; [-->](?attr>v) filter attr; [->:E:attr > val:->] edge attr filter; TRAVERSAL FROM VARIABLE: [node_var -->] or [node_var ->:E:->] traverses from a specific node (not just here); walrus in connect: root +>: E() :+> (end := A()); visit : 0 : [-->] (indexed visit). Wrong: a ++> Edge() ++> b; [-->:E:]; del a --> b;
-
-8. ABILITIES: can name with Type entry { } or exit { }; always requires with...entry/exit; use def for regular methods; self=instance here=node visitor=walker props=walker_props root=user_root Root=root_type
-
-9. WALKERS: root spawn Walker(); OR Walker() spawn root; (both valid, use root or a variable, never bare keyword node); visit [-->]; visit [-->] else { }; visit [->:E:->]; report val; disengage; skip; result.reports for collected
-
-10. BY_LLM: def f(x: str) -> str by llm; (builtin, no import); def f() -> Obj by llm(); also valid; by llm(temperature=0.7) for params; by llm(method="Reason"); has desc: str = "" """hint"""; for semstrings (default value required); "prompt" by llm; for inline
-
-11. FILE_JSON: f=file.open(p,"r"); f.read(); f.write(s); f.close(); json.dumps(data); json.loads(s) (NEVER use obj as variable name, it is a keyword)
-
-12. API: jac start file.jac; walker becomes endpoint; walker :pub W { has d: str; obj __specs__ { static has methods: list=["GET"]; static has path_prefix: str="/api"; } can h with Root entry { report {"k":v}; } }; :pub makes walker public (no auth) but :pub walkers have READ-ONLY root access (graph writes silently fail); without :pub, auth required (Jac built-in: /user/register, /user/login for tokens); for custom auth (OAuth/JWT): make all walkers :pub, handle auth manually inside walker; __specs__ controls methods/path only, NOT auth; wrong: static has auth: bool=False; in __specs__ (does nothing)
-
-13. WEBSOCKET: obj __specs__ { static has methods: list=["websocket"]; }; socket.notify_users(ids,msg); socket.notify_channels(names,msg)
-
-14. WEBHOOKS: obj __specs__ { static has webhook: dict={"type":"header","name":"X-Sig"}; }; endpoint /webhook/walker/name
-
-15. SCHEDULER: obj __specs__ { static has schedule: dict={"trigger":"cron","hour":"9"}; static has private: bool=True; }; triggers: cron interval date
-
-16. ASYNC: async walker W { async can f with entry { await op(); } }; async def f() { }; task.__jac__.status/reports/error
-
-17. PERMISSIONS: node.__jac__.grant(root, WritePerm); node.__jac__.revoke(root); node.__jac__.check_access(root, ReadPerm); levels: NoPerm ReadPerm ConnectPerm WritePerm
-
-18. PERSISTENCE: nodes connected to root auto-persist; save(node); commit(); &id for reference; del node; commit(); glob var: T = val; for persistent globals
-
-19. TESTING: test my_test { assert cond; } (no check keyword, only assert; test names are identifiers not strings; WRONG: test "name" { })
-
-20. STDLIB: print len range enumerate type str int float list dict set; s.upper() lower() strip() split() join(); l.append() extend() pop() sort(); d.keys() values() items() get()
-
-21. JSX/CLIENT: .cl.jac files are automatically client-side (no cl{} wrapper needed); sv import from walkers { W } for server imports in cl context; import from react { useEffect } for lifecycle (NOT can with entry in client context); useEffect(lambda -> None { myAsyncFunc(); }, []) for mount; async def myAsyncFunc() -> None { result = root spawn W(); } (root spawn requires async def); root spawn ALWAYS sends POST -- walker __specs__ MUST include "POST" in methods list; walker must be walker :pub (no auth) or client must be authenticated; NO ternary ?: -- use (expr) if cond else (expr); FULL JS builtin mapping: .length not len(); String(x) not str(x); parseInt(x) not int(x); parseFloat(x) not float(x); Math.min/max not min/max; .trim() not .strip(); no range() (use while loop); no enumerate(); (dict["k"] or default) not dict.get(); + for string concat (no f-strings); no tuple unpacking in cl (use item[0]); no new keyword; className not class for JSX attributes (React 18 ignores class prop); import "./styles.css"; for CSS; empty lambda body fails: use { 0; } not {}; cl { def:pub App() -> any { has count: int=0; def inc() { count += 1; } return <div><p>{count}</p><button onClick={inc}>+</button></div>; } }; component imports: import from .components.Button { Button }
-
-22. JAC.TOML (project config): [project] name version description entry-point="main.jac"; [dependencies] requests=">=2.28.0"; [dependencies.npm] jac-client-node="1.0.4"; [dependencies.npm.dev] "@jac-client/dev-deps"="1.0.0"; [dev-dependencies] watchdog=">=3.0.0"; [serve] port=8000 base_route_app="app" (serves client app at / instead of API info); [plugins.client] port=5173; [build] dir=".jac"; [scripts] dev="jac run main.jac"
-
-23. FULLSTACK SETUP: jac create myapp --use client (scaffolds project); jac install (syncs all deps); jac start auto-installs npm deps from jac.toml; jac add --npm lodash (adds to jac.toml and installs); NEVER run npm install or bun install in .jac/client/ directly (corrupts managed tree); ENTRY POINT: main.jac has sv{} block importing server walkers + cl{} block with def:pub app() -> any matching base_route_app in jac.toml; .cl.jac files auto-compiled to .jac/client/compiled/ (do NOT include via include); include in __init__.jac: use full dotted paths (include pkg.module;) -- short paths pass jac check but fail at runtime; .jac/ directory is fully auto-generated (never modify manually, files get wiped on regen); Tailwind v4: add tailwindcss and @tailwindcss/postcss to [dependencies.npm], place postcss.config.js at .jac/client/postcss.config.js (Vite root, not project root)
-
-24. DEV SERVER: jac start --dev (HMR mode); --port is main dev port (Vite frontend, default 8000); --api_port is backend API (default 8001, proxied via Vite); --no-client skips client bundling (API only); browser opens port 8000; /walker/* /function/* /user/* auto-proxied to API; file watcher monitors .jac files for hot reload
-
-25. DEPLOY: docker: FROM python:3.11-slim; pip install jaseci (full install with all plugins; jaclang is minimal compiler-only); jac start main.jac; jac start --scale; env: DATABASE_URL JAC_SECRET_KEY OPENAI_API_KEY
-
-26. ENV_LOADING: jac start does NOT auto-load .env files; import from dotenv { load_dotenv }; glob _dotenv_loaded: bool = load_dotenv() or True; (glob trick runs at module load since top-level statements not allowed); then use import from os { getenv }; val = getenv("MY_VAR"); requires python-dotenv in [dependencies] in jac.toml
-
-PATTERNS (include 2-3 complete examples using CORRECT syntax above):
-- Fullstack single-file with sv{} and cl{} -- use +>: E() :+> for typed edges; block-form lambdas for event handlers; show jac.toml with base_route_app and dependencies.npm; show main.jac entry point pattern with sv{} imports and cl{} def:pub app; in cl{} use useEffect(lambda -> None { asyncFunc(); }, []) for lifecycle, async def for root spawn, JS builtins (.length not len()), (expr) if cond else (expr) not ternary ?:, string concat not f-strings, sv import for server walkers, className not class for JSX attributes; walker __specs__ MUST include "POST" for any walker called from client (root spawn always sends POST); walkers called from client should be walker :pub (public, no auth) unless client handles authentication; NEVER use static has auth: bool in __specs__ (auth is controlled by :pub on walker declaration)
-- Walker graph traversal with visit/report -- use [->:E:->] for typed traversal, a del--> b for disconnect, show [node_var ->:E:->] for traversal from specific node
-- API endpoint with __specs__ and :pub -- use walker :pub for public endpoints; match x { case V: stmt; } for match/case; NEVER use static has auth: bool in __specs__
+COMMON ERRORS TABLE: ~30 rows, aligned WRONG -> RIGHT format. Include all critical errors.
 
 ---
 
@@ -153,251 +140,122 @@ EXTRACTED CONTENT:
 
 ---
 
-VERIFIED SYNTAX EXAMPLES (use these as ground truth):
+VERIFIED SYNTAX (ground truth -- use these exact forms):
 
-# Typed edge connect
-node A { has val: int = 0; }
-edge E { has weight: float = 1.0; }
-with entry { a = root ++> A(val=1); b = root ++> A(val=2); a[0] +>: E(weight=0.5) :+> b[0]; }
+# Typed edges
+a +>: E(weight=0.5) :+> b; # Connect
+[->:E:->] # Traverse
+[->:E1:->->:E2:->] # Chained
+a <+: E() :<+ b; # Backward connect
+[<-:E:<-] # Backward traverse
+a del--> b; # Disconnect
 
-# Typed edge traversal
-with entry { items = [->:E:->]; }
+# Filters
+[-->](?:MyNode) # Type filter
+[-->](?:MyNode, age > 18) # Type + attr
+[-->](?age > 18) # Untyped attr
+[->:Friend:since > 2020:->] # Edge attr
 
-# Chained typed traversal
-with entry { items = [root->:E1:->->:E2:->]; }
+# Variable node traversal
+neighbors = [city_a ->:Road:->];
+untyped = [node_var -->];
 
-# Disconnect
-with entry { a = root ++> A(); root del--> a[0]; }
+# Match/case
+match x { case 1: print("one"); case _: print("other"); }
 
-# Match/case (colons, not braces)
-with entry { x = 1; match x { case 1: print("one"); case _: print("other"); } }
+# Lambda forms
+f = lambda x: int -> int : x * 2; # Expression
+f = lambda x: int -> int { return x * 2; }; # Block (MUST return)
+lambda e: any -> None { input_val = e.target.value; } # Assignment = block form
+lambda e: any -> None { 0; } # Empty body (not {})
 
-# Lambda expression form
-with entry { f = lambda x: int -> int : x * 2; }
+# Spawn
+root spawn W(); W() spawn root; # Both valid
 
-# Lambda block form (MUST have return)
-with entry { f = lambda x: int -> int { return x * 2; }; }
+# Import (NO semicolon after import from { })
+import os;
+import from math { sqrt }
 
-# Lambda multi-param
-with entry { f = lambda x: int, y: int -> int : x + y; }
+# Walrus
+root +>: E() :+> (end := A(val=10));
 
-# Spawn both forms (use root or variable, NEVER bare keyword node)
-with entry { root spawn W1(); W2() spawn root; }
+# Visit indexed
+visit : 0 : [-->];
 
-# Edge connect with kwargs
-with entry { root +>: E() : weight=0.5 :+> A(val=1); }
-
-# Edge filter by attribute
-with entry { items = [->:Friend:since > 2020:->]; }
-
-# Filter comprehension (new syntax: (?:Type) not (`?Type))
-node MyNode { has name: str; has age: int = 0; }
-with entry { all_nodes = [-->](?:MyNode); adults = [-->](?:MyNode, age > 18); }
-
-# Walker with typed visit
-walker W { can go with Root entry { visit [->:E:->]; } }
-
-# Backward typed connect
-with entry { a = root ++> A(val=1); b = root ++> A(val=2); a[0] <+: E(weight=0.5) :<+ b[0]; }
-
-# Backward typed traversal
-with entry { items = [<-:E:<-]; }
-
-# Try/except
-with entry { try { x = 1 / 0; } except ZeroDivisionError as e { print("caught"); } finally { print("done"); } }
-
-# Pipe operator
-with entry { "hello world" |> print; }
-
-# Inheritance
-obj Animal { has name: str; def speak() -> str { return "..."; } }
-obj Dog(Animal) { def speak() -> str { return "Woof!"; } }
-
-# Impl block (separate declaration from implementation)
-walker Creator { can create with Root entry; }
-impl Creator.create { print("created"); }
+# Test
+test my_test { assert 1 + 1 == 2; }
 
 # Postinit
 obj MyObj { has x: int = 0; has y: int by postinit; def postinit { self.y = self.x * 2; } }
 
-# Walrus in connect
-with entry { root +>: E() :+> (end := A(val=10)); }
-
-# Visit with index
-walker WI { can go with Root entry { visit : 0 : [-->]; } }
-
-# f-string
-with entry { name = "World"; print(f"Hello {name}!"); }
-
-# Test block (identifier name, NOT string)
-test addition_works { assert 1 + 1 == 2; }
-
-# JSON (never use obj as variable -- it's a keyword)
-import json;
-with entry { s = json.dumps({"a": 1}); data = json.loads(s); }
-
-# Correct attribute ordering (non-default before default)
-node Person { has name: str; has age: int = 0; }
-
-# Lambda with assignment -- MUST use block form (expression form cannot have assignments)
-# WRONG: lambda e: any -> None : input_val = e.target.value
-# RIGHT: lambda e: any -> None { input_val = e.target.value; }
-
-# cl block list append (not + operator, cl{} blocks only)
-# items.append(x); NOT items = items + [x]; (this restriction is cl{} blocks only)
-
-# Traversal from a specific node variable (not just here)
-node City { has name: str; }
-edge Road { has distance: float = 0.0; }
-with entry { a = (root +>: Road(distance=50.0) :+> City(name="X"))[0]; neighbors = [a ->:Road:->]; untyped = [a -->]; }
-
-# Glob access in functions (no re-declaration needed)
+# Glob
 glob counter: int = 0;
 def increment() -> int { counter += 1; return counter; }
 
-# Lambda as sort key argument
-with entry { items: list = [{"v": 2.0}, {"v": 1.0}]; items.sort(key=lambda x: dict -> float : x["v"]); }
+# cl{} patterns
+# sv import from walkers { W } -- sv prefix required
+# useEffect(lambda -> None { myAsyncFunc(); }, []);
+# async def myAsyncFunc() -> None { result = root spawn W(); }
+# className not class; (expr) if cond else (expr) not ternary
+# .length not len(); String(x) not str(x); + not f-strings
 
-# Top-level restriction: only declarations allowed, not executable statements
-# WRONG: print("hello"); at top level
-# RIGHT: with entry { print("hello"); }
+# Routing
+# import from "@jac/runtime" { Router, Routes, Route, Link, Navigate, useNavigate }
 
-# Import forms
-# WRONG: import from math, sqrt;
-# RIGHT: import from math { sqrt }
-# import:py and import:jac do NOT exist in Jac
+# Client auth
+# import from "@jac/runtime" { jacSignup, jacLogin, jacLogout, jacIsLoggedIn }
 
-# Fullstack entry point (main.jac) -- shows wiring pattern
-# sv { import from endpoints { Todo, AddTodo, ListTodos } }
-# cl { import from .frontend { app as ClientApp }
-#     def:pub app -> any { return <ClientApp />; }
-# }
+# Semantic annotations
+# sem Analysis.sentiment = "overall emotional tone";
+# def analyze(text: str) -> Analysis by llm;
+# glob llm = Model(model_name="claude-sonnet-4-20250514");
 
-# jac.toml for fullstack project
+# Websocket
+# async walker :pub Echo { obj __specs__ { static has methods: list = ["websocket"]; } async can echo with Root entry { report here; } }
+# Endpoint: ws://localhost:8000/ws/Echo
+
+# :pub walker read-only root
+# walker :pub ReadOnly { can read with Root entry { report [-->]; } } # OK
+# walker :pub WriteAttempt { can write with Root entry { here +>: E() :+> N(); } } # Silently fails!
+
+# .env loading
+# import from dotenv { load_dotenv }
+# glob _: bool = load_dotenv() or True;
+
+# jac.toml
 # [project]
 # name = "myapp"
 # entry-point = "main.jac"
 # [dependencies.npm]
 # jac-client-node = "1.0.4"
-# [dependencies.npm.dev]
-# "@jac-client/dev-deps" = "1.0.0"
 # [serve]
 # base_route_app = "app"
-# [plugins.client]
-
-# No ternary ?: in Jac
-# WRONG: result = x > 0 ? "yes" : "no";
-# RIGHT: result = ("yes") if x > 0 else ("no");
-
-# cl{} context: JS builtins, not Python
-# WRONG (in cl): len(items), item.strip(), str(x), f"Hello {name}"
-# RIGHT (in cl): items.length, item.trim(), String(x), "Hello " + name
-
-# sv import prefix for server imports in .cl.jac
-# sv import from walkers.todo { AddTodo, ListTodos }
-
-# useEffect for lifecycle in cl (NOT can with entry)
-# import from react { useEffect }
-# useEffect(lambda -> None { loadData(); }, []);
-# async def loadData() -> None { result = root spawn GetItems(); }
-# root spawn MUST be in async def (compiles to await)
-
-# include in __init__.jac: use full dotted paths
-# WRONG: include nodes; (passes jac check, fails at runtime)
-# RIGHT: include mypackage.nodes;
-
-# className not class in JSX (React 18 ignores class prop)
-# WRONG: <div class="container">
-# RIGHT: <div className="container">
-
-# root spawn sends POST -- walker must allow POST and be :pub for no-auth access
-# walker :pub MyWalker {
-#     obj __specs__ { static has methods: list = ["POST"]; } # MUST include POST for client spawn
-#     can run with Root entry { report "ok"; }
-# }
-# WRONG: static has auth: bool = False; # auth field in __specs__ does nothing
-# RIGHT: walker :pub MyWalker { } # :pub controls auth, not __specs__
-
-# npm deps via jac.toml only
-# [dependencies.npm]
-# tailwindcss = "^4.0.0"
-# "@tailwindcss/postcss" = "^4.0.0"
-# WRONG: cd .jac/client && npm install tailwindcss
-
-# :pub walker -- public but READ-ONLY root access
-# walker :pub ReadOnly {
-#     obj __specs__ { static has methods: list = ["GET", "POST"]; }
-#     can read with Root entry { report [-->]; } # OK: reads work
-# }
-# WRONG: graph writes silently fail in :pub walker when here is root
-# walker :pub WriteAttempt {
-#     can write with Root entry { here +>: E() :+> Node(); } # Silently fails!
-# }
-# For write access: use Jac built-in auth (walker without :pub + auth token)
-
-# Custom auth: make all walkers :pub, check auth manually
-# walker :pub SecureEndpoint {
-#     has token: str = "";
-#     can handle with Root entry {
-#         if not verify_jwt(self.token) { report {"error": "unauthorized"}; disengage; }
-#         report {"data": "secret"};
-#     }
-# }
-
-# .env loading via glob trick (top-level statements not allowed)
-# import from dotenv { load_dotenv }
-# import from os { getenv }
-# glob _dotenv_loaded: bool = load_dotenv() or True;
-# with entry { api_key = getenv("API_KEY"); }
-
-# Empty lambda body -- use { 0; } not {}
-# WRONG: lambda e: any -> None {}
-# RIGHT: lambda e: any -> None { 0; }
-
-# Full cl{} JS builtin mapping
-# WRONG (in cl): len(items), str(x), int(x), float(x), min(a,b), max(a,b), s.strip(), range(5), enumerate(items), d.get("k", v), f"Hi {x}"
-# RIGHT (in cl): items.length, String(x), parseInt(x), parseFloat(x), Math.min(a,b), Math.max(a,b), s.trim(), (use while loop), (manual index), (d["k"] or v), "Hi " + x
 
 ---
 
-Generate terse reference. No markdown. No blank lines. Show syntax and examples, minimize explanation. All topics required. ~15-20KB target. Every code example MUST use the verified syntax above. When in doubt, prefer the VERIFIED SYNTAX EXAMPLES over any other source.
+Generate terse markdown reference. Use # headers for topics, ```jac blocks for code. Every code example MUST use verified syntax above. 26 topics + errors table + 3 patterns. HARD LIMIT: 22KB max. Match ~500 lines / 20KB density.
 
-GOLDEN STYLE EXAMPLE (Follow this EXACT formatting, spacing, and header style):
+GOLDEN STYLE (match this density):
 
 # 1. TYPES
-int float str bool bytes any; list[T] dict[K,V] set[T]; type|None
-glob var: T = val; # Global variable
-has x: int = 0; # Class attribute
 
-# 2. CONTROL
-if cond { stmt; } elif cond { stmt; } else { stmt; }
-for x in items { stmt; }
-match x { case 1: stmt; case _: stmt; } # Colons, not braces
+`int` `float` `str` `bool` `bytes` `any`; `list[T]` `dict[K,V]` `set[T]`; `int|None` for optional
 
-# 3. FUNCTIONS
-def name(p: int) -> int { return p * 2; }
-lambda x: int -> int : x * 2; # Expression form
-lambda x: int -> int { return x * 2; }; # Block form (requires return)
-val |> func; # Pipe operator
+`has x: int;` `has y: str = "default";` `-> ReturnType`
 
-# 4. ARCHETYPES
-node Person {
-    has name: str;
-    has age: int = 0;
-    can greet with Root entry { print("Hi"); }
-}
-walker W {
-    has visited: list[node] = [];
-    can move with Root entry { visit [-->]; }
-}
-edge Friend { has since: int; }
+`True`/`False` (true/false FAIL at runtime)
 
-# 5. GRAPH
-root ++> Person(name="A"); # Untyped
-root +>: Friend(since=2020) :+> Person(name="B"); # Typed forward
-[->:Friend:->]; # Typed traversal
-a del--> b; # Disconnect
+Non-default attrs MUST precede default: `has y: str; has x: int = 0;`
 
-# 6. ASYNC
-async def fetch() -> str { return "data"; }
-async can process with entry { await fetch(); }
+# 7. GRAPH
+
+```jac
+a ++> b;                              # Untyped forward
+a +>: Friend(since=2020) :+> b;       # Typed forward
+[->:Friend:->]                        # Typed traversal
+a del--> b;                           # Disconnect
+[-->](?:Person)                       # Type filter
+[-->](?:Person, age > 18)             # Type+attr filter
+```
+
+WRONG: `a ++> Edge() ++> b;` `[-->:E:]` `del a --> b;`

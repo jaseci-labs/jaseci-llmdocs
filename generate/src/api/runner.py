@@ -398,7 +398,7 @@ class PipelineRunner:
             # Also save to release
             release_dir = self.root.parent / "release"
             release_dir.mkdir(exist_ok=True)
-            (release_dir / "candidate.txt").write_text(result)
+            (release_dir / "jac-llmdocs.md").write_text(result)
 
             # Run jac check before saving validation (will be added to final_validation below)
 
@@ -499,13 +499,13 @@ class PipelineRunner:
             }
 
             # Save validation results as JSON
-            validation_json_path = release_dir / "candidate.validation.json"
+            validation_json_path = release_dir / "jac-llmdocs.validation.json"
             validation_json_path.write_text(json.dumps(self.final_validation, indent=2))
 
             stage.extra = {
                 "validation": self.final_validation,
                 "output_path": str(output_path),
-                "release_path": str(release_dir / "candidate.txt"),
+                "release_path": str(release_dir / "jac-llmdocs.md"),
                 "validation_path": str(validation_json_path),
             }
 

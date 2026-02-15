@@ -2,8 +2,8 @@
 """CLI pipeline runner for agent invocation.
 
 Usage:
-    python generate/run_pipeline.py                  # full pipeline
-    python generate/run_pipeline.py --skip-fetch     # skip fetch, reuse sanitized
+    python generate/run_pipeline.py                  # full pipeline (fetch + extract + assemble + validate)
+    python generate/run_pipeline.py --stage extract   # run single stage
     python generate/run_pipeline.py --validate-only  # validate existing candidate
     python generate/run_pipeline.py --json           # JSON summary only
 """
@@ -87,9 +87,103 @@ def run_extract(config, quiet=False):
     }
 
 
+def ensure_rules_jsonl(quiet=False):
+    """Generate rules.jsonl from assembly_prompt.txt if missing or stale."""
+    rules_path = ROOT / "config" / "rules.jsonl"
+    prompt_path = ROOT / "config" / "assembly_prompt.txt"
+
+    if not prompt_path.exists():
+        return rules_path
+
+    needs_rebuild = (
+        not rules_path.exists()
+        or prompt_path.stat().st_mtime > rules_path.stat().st_mtime
+    )
+
+    if needs_rebuild:
+        log("[RAG] Generating rules.jsonl from assembly_prompt.txt...", quiet)
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from split_rules import main as split_main
+        split_main()
+
+    return rules_path
+
+
+def init_rag(config, extracted, quiet=False):
+    """Initialize RAG retriever with graceful fallback."""
+    rag_config = config.get("rag", {})
+    if not rag_config.get("enabled", True):
+        log("[RAG] Disabled in config", quiet)
+        return None
+
+    try:
+        from src.pipeline.rag import RAGRetriever
+
+        retriever = RAGRetriever(config)
+        if not retriever.available:
+            log("[RAG] Dependencies not installed, falling back to monolithic", quiet)
+            return None
+
+        rules_path = ensure_rules_jsonl(quiet)
+        rules_count = retriever.ensure_rules_indexed(rules_path)
+        log(f"[RAG] Rules indexed: {rules_count}", quiet)
+
+        examples_count = retriever.index_extracted_examples(extracted)
+        log(f"[RAG] Examples indexed: {examples_count}", quiet)
+
+        return retriever
+
+    except Exception as exc:
+        log(f"[RAG] Initialization failed: {exc}, falling back to monolithic", quiet)
+        return None
+
+
+def fetch_jaclang_version():
+    """Fetch current jaclang major.minor version from upstream."""
+    import urllib.request
+    try:
+        url = "https://raw.githubusercontent.com/jaseci-labs/jaseci/main/jac/pyproject.toml"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            for line in resp.read().decode().splitlines():
+                if line.startswith("version"):
+                    return ".".join(line.split('"')[1].split(".")[:2])
+    except Exception:
+        return None
+
+
+def check_version_and_archive(quiet=False):
+    """Check jaclang version; archive old candidate if version changed."""
+    release_dir = ROOT.parent / "release"
+    version_file = release_dir / "VERSION"
+    current = version_file.read_text().strip() if version_file.exists() else ""
+
+    upstream = fetch_jaclang_version()
+    if not upstream:
+        log("[VERSION] Could not fetch jaclang version, skipping check", quiet)
+        return current
+
+    log(f"[VERSION] Current: {current or '<none>'}, Upstream: {upstream}", quiet)
+
+    if current and current != upstream:
+        archive_dir = release_dir / current
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        candidate = release_dir / "jac-llmdocs.md"
+        validation = release_dir / "jac-llmdocs.validation.json"
+        if candidate.exists():
+            (archive_dir / "jac-llmdocs.md").write_text(candidate.read_text())
+        if validation.exists():
+            (archive_dir / "jac-llmdocs.validation.json").write_text(validation.read_text())
+        log(f"[VERSION] Archived release/{current}/", quiet)
+
+    version_file.write_text(upstream + "\n")
+    return upstream
+
+
 def run_assemble(config, extracted, extractor, quiet=False):
     log("[ASSEMBLE] Starting LLM assembly...", quiet)
     t0 = time.time()
+
+    rag_retriever = init_rag(config, extracted, quiet)
 
     llm = LLM(config, config.get("assembly", {}))
     token_count = [0]
@@ -102,7 +196,7 @@ def run_assemble(config, extracted, extractor, quiet=False):
     def on_progress(current, total, msg):
         log(f"[ASSEMBLE] {msg}", quiet)
 
-    assembler = Assembler(llm, config, on_progress=on_progress, on_token=on_token)
+    assembler = Assembler(llm, config, on_progress=on_progress, on_token=on_token, rag_retriever=rag_retriever)
     result = assembler.assemble(extracted, extractor)
 
     if token_count[0] >= 100 and not quiet:
@@ -114,11 +208,12 @@ def run_assemble(config, extracted, extractor, quiet=False):
 
     release_dir = ROOT.parent / "release"
     release_dir.mkdir(exist_ok=True)
-    (release_dir / "candidate.txt").write_text(result)
+    (release_dir / "jac-llmdocs.md").write_text(result)
 
     duration = time.time() - t0
+    mode = "RAG-enhanced" if rag_retriever else "monolithic"
     log(
-        f"[ASSEMBLE] Output: {len(result):,} bytes saved to release/candidate.txt ({duration:.1f}s)",
+        f"[ASSEMBLE] Output: {len(result):,} bytes saved to release/jac-llmdocs.md ({duration:.1f}s, {mode})",
         quiet,
     )
 
@@ -127,6 +222,7 @@ def run_assemble(config, extracted, extractor, quiet=False):
         "duration": round(duration, 1),
         "output_size": len(result),
         "tokens_streamed": token_count[0],
+        "mode": mode,
     }
 
 
@@ -189,7 +285,7 @@ def run_validate(text, quiet=False):
 
     release_dir = ROOT.parent / "release"
     release_dir.mkdir(exist_ok=True)
-    (release_dir / "candidate.validation.json").write_text(json.dumps(validation_data, indent=2))
+    (release_dir / "jac-llmdocs.validation.json").write_text(json.dumps(validation_data, indent=2))
 
     return validation_data
 
@@ -197,9 +293,8 @@ def run_validate(text, quiet=False):
 def main():
     parser = argparse.ArgumentParser(description="Run the Jac docs generation pipeline")
     parser.add_argument("--stage", choices=["fetch", "extract", "assemble"], help="Run single stage")
-    parser.add_argument("--validate-only", action="store_true", help="Validate existing release/candidate.txt")
+    parser.add_argument("--validate-only", action="store_true", help="Validate existing release/jac-llmdocs.md")
     parser.add_argument("--json", action="store_true", help="Output JSON summary only")
-    parser.add_argument("--skip-fetch", action="store_true", help="Skip fetch stage")
     args = parser.parse_args()
 
     quiet = args.json
@@ -207,15 +302,15 @@ def main():
 
     try:
         if args.validate_only:
-            candidate = ROOT.parent / "release" / "candidate.txt"
+            candidate = ROOT.parent / "release" / "jac-llmdocs.md"
             if not candidate.exists():
-                log("[ERROR] release/candidate.txt not found", quiet)
-                summary["error"] = "release/candidate.txt not found"
+                log("[ERROR] release/jac-llmdocs.md not found", quiet)
+                summary["error"] = "release/jac-llmdocs.md not found"
                 print_summary(summary)
                 sys.exit(2)
 
             text = candidate.read_text()
-            log(f"[VALIDATE] Loaded {len(text):,} bytes from release/candidate.txt", quiet)
+            log(f"[VALIDATE] Loaded {len(text):,} bytes from release/jac-llmdocs.md", quiet)
             summary["validation"] = run_validate(text, quiet)
             summary["output_path"] = str(candidate)
             summary["success"] = summary["validation"]["recommendation"] == "PASS"
@@ -224,11 +319,12 @@ def main():
 
         config = load_config()
 
+        version = check_version_and_archive(quiet)
+        summary["jaclang_version"] = version
+
         stages_to_run = ["fetch", "extract", "assemble"]
         if args.stage:
             stages_to_run = [args.stage]
-        elif args.skip_fetch:
-            stages_to_run = ["extract", "assemble"]
 
         extracted = None
         extractor = None
@@ -251,7 +347,7 @@ def main():
 
         if result_text:
             summary["validation"] = run_validate(result_text, quiet)
-            summary["output_path"] = "release/candidate.txt"
+            summary["output_path"] = "release/jac-llmdocs.md"
             summary["success"] = summary["validation"]["recommendation"] == "PASS"
         else:
             summary["success"] = True

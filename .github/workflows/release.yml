@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'release/candidate.txt'
+      - 'release/jac-llmdocs.md'
 
 permissions:
   contents: write
@@ -18,12 +18,45 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get next version
-        id: version
+      - name: Check jaclang version
+        id: version_check
         run: |
-          jaclang_version=$(curl -s https://raw.githubusercontent.com/jaseci-labs/jaseci/main/jac/pyproject.toml \
+          jaclang_version=$(curl -sf https://raw.githubusercontent.com/jaseci-labs/jaseci/main/jac/pyproject.toml \
             | grep '^version' | head -1 | sed 's/.*"\(.*\)"/\1/')
           base=$(echo "$jaclang_version" | cut -d. -f1,2)
+          current=$(tr -d '[:space:]' < release/VERSION 2>/dev/null || echo "")
+          echo "jaclang_full=$jaclang_version" >> "$GITHUB_OUTPUT"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          if [ "$current" != "$base" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Archive previous version
+        if: steps.version_check.outputs.changed == 'true' && steps.version_check.outputs.current != ''
+        run: |
+          old="${{ steps.version_check.outputs.current }}"
+          mkdir -p "release/$old"
+          [ -f release/jac-llmdocs.md ] && cp release/jac-llmdocs.md "release/$old/jac-llmdocs.md"
+          [ -f release/jac-llmdocs.validation.json ] && cp release/jac-llmdocs.validation.json "release/$old/jac-llmdocs.validation.json"
+          echo "${{ steps.version_check.outputs.base }}" > release/VERSION
+          echo "Archived release/$old/"
+
+      - name: Commit archived version
+        if: steps.version_check.outputs.changed == 'true' && steps.version_check.outputs.current != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add release/
+          git diff --cached --quiet || git commit -m "chore: archive release ${{ steps.version_check.outputs.current }} before ${{ steps.version_check.outputs.base }} upgrade"
+          git push
+
+      - name: Get next tag
+        id: tag
+        run: |
+          base="${{ steps.version_check.outputs.base }}"
           latest=$(git tag --sort=-v:refname | grep -E "^v${base}\.[0-9]+$" | head -n1)
           if [ -z "$latest" ]; then
             echo "version=v${base}.0" >> "$GITHUB_OUTPUT"
@@ -36,10 +69,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.version.outputs.version }}" \
-            release/candidate.txt \
-            --title "llmdocs ${{ steps.version.outputs.version }}" \
-            --notes "Auto-generated release from candidate.txt update.
+          gh release create "${{ steps.tag.outputs.version }}" \
+            release/jac-llmdocs.md \
+            --title "llmdocs ${{ steps.tag.outputs.version }}" \
+            --notes "Jac language reference for jaclang ${{ steps.version_check.outputs.jaclang_full }}.
 
           Commit: ${{ github.sha }}
           Author: ${{ github.actor }}"

@@ -65,8 +65,8 @@ Progress lines print to stdout during execution. A structured JSON summary is al
 | `config/assembly_prompt.txt` | LLM prompt template |
 | `src/pipeline/validator.py` | Code block validation via `jac check` |
 | `src/pipeline/docs_validator.py` | Canonical syntax pattern checks |
-| `release/candidate.txt` | Generated output |
-| `release/candidate.validation.json` | Validation results |
+| `release/jac-llmdocs.md` | Generated output |
+| `release/jac-llmdocs.validation.json` | Validation results |
 
 ## Decision Flow
 
@@ -74,7 +74,7 @@ Progress lines print to stdout during execution. A structured JSON summary is al
 run --validate-only
   |
   v
-recommendation == "PASS"? --> read release/candidate.txt, done
+recommendation == "PASS"? --> read release/jac-llmdocs.md, done
   |
   no
   v

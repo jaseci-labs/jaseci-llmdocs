@@ -269,7 +269,7 @@ async def validate_output():
     """Validate the current output against jac check and official docs."""
     output_path = ROOT / "output" / "2_final" / "jac_reference.txt"
     if not output_path.exists():
-        release_path = ROOT.parent / "release" / "candidate.txt"
+        release_path = ROOT.parent / "release" / "jac-llmdocs.md"
         if release_path.exists():
             output_path = release_path
         else:
@@ -333,8 +333,8 @@ async def get_docs_info():
 
 @app.get("/api/candidate")
 async def get_candidate():
-    """Get the current candidate.txt content."""
-    release_path = ROOT.parent / "release" / "candidate.txt"
+    """Get the current jac-llmdocs.md content."""
+    release_path = ROOT.parent / "release" / "jac-llmdocs.md"
     if not release_path.exists():
-        raise HTTPException(status_code=404, detail="No candidate.txt found")
+        raise HTTPException(status_code=404, detail="No jac-llmdocs.md found")
     return {"content": release_path.read_text()}

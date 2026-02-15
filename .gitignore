@@ -43,6 +43,7 @@ generate/fetched/
 generate/venv/
 generate/config/sources.db
 generate/config/sources.json
+generate/data/chromadb/
 
 # Tests
 tests/debug-*.txt

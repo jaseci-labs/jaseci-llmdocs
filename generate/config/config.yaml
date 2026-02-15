@@ -9,3 +9,12 @@ llm:
     temperature: 0.0
     seed: 42
     max_retries: 3
+
+# RAG Configuration
+rag:
+    enabled: true
+    embedding_model: "all-MiniLM-L6-v2"
+    persist_dir: "data/chromadb"
+    rules_per_section: 15
+    examples_per_section: 3
+    mmr_lambda: 0.5
