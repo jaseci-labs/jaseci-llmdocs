@@ -22,7 +22,7 @@ class Assembler:
         self.on_token = on_token
         self.rag_retriever = rag_retriever
 
-        root = Path(__file__).parents[2]
+        root = Path(__file__).parents[1]
         prompt_path = root / "config" / "rag_rules.txt"
         with open(prompt_path) as f:
             self.prompt_template = f.read()
@@ -167,7 +167,7 @@ class LosslessPipeline:
 
     def __init__(self, config_path: Path):
         import yaml
-        self.root = Path(__file__).parents[2]
+        self.root = Path(__file__).parents[1]
 
         with open(config_path) as f:
             self.config = yaml.safe_load(f)
@@ -253,7 +253,7 @@ class LosslessPipeline:
 def run_pipeline(config_path: str = None):
     """Entry point for lossless pipeline."""
     if config_path is None:
-        config_path = Path(__file__).parents[2] / "config" / "config.yaml"
+        config_path = Path(__file__).parents[1] / "config" / "config.yaml"
     else:
         config_path = Path(config_path)
 

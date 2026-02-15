@@ -26,7 +26,7 @@ class Sanitizer:
     def __init__(self, config: dict):
         self.cfg = config
         self.min_content_length = 200
-        config_path = Path(__file__).parents[2] / "config" / "config.yaml"
+        config_path = Path(__file__).parents[1] / "config" / "config.yaml"
         self.source_manager = SourceManager(config_path)
         self.jac_extractor = JacExtractor(config)
 

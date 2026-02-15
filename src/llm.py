@@ -7,7 +7,7 @@ from typing import Dict, Optional, Callable
 from dotenv import load_dotenv
 
 # Load .env
-docgen_dir = Path(__file__).parents[2]
+docgen_dir = Path(__file__).parents[1]
 if (docgen_dir / ".env").exists(): load_dotenv(docgen_dir / ".env")
 
 class LLM:

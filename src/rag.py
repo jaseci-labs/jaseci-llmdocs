@@ -319,7 +319,7 @@ class RAGRetriever:
         self._available = None
 
         persist_dir = self._config.get("persist_dir", "data/chromadb")
-        self._persist_path = Path(__file__).parents[2] / persist_dir
+        self._persist_path = Path(__file__).parents[1] / persist_dir
 
     @property
     def available(self) -> bool:
