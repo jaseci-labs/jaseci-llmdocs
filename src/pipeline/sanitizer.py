@@ -3,8 +3,7 @@ import shutil
 from pathlib import Path
 
 from .sources import SourceManager, SourceType
-from .semantic_extractor import SemanticExtractor
-from .lark_extractor import LarkExtractor
+from .jaclang_extractor import JaclangExtractor
 
 
 EXCLUDE_PATTERNS = [
@@ -29,8 +28,7 @@ class Sanitizer:
         self.min_content_length = 200
         config_path = Path(__file__).parents[2] / "config" / "config.yaml"
         self.source_manager = SourceManager(config_path)
-        self.semantic_extractor = SemanticExtractor(config)
-        self.lark_extractor = LarkExtractor(config)
+        self.jaclang_extractor = JaclangExtractor(config)
 
     def should_exclude(self, path: Path) -> bool:
         parts = set(path.parts)
@@ -163,12 +161,12 @@ class Sanitizer:
                     })
 
             if source.source_type in (SourceType.JAC, SourceType.BOTH):
-                ast_results = self.lark_extractor.process_directory(source_dir)
+                ast_results = self.jaclang_extractor.process_directory(source_dir)
                 stats["jac_files"] += ast_results["totals"]["files"]
                 stats["jac_definitions"] += len(ast_results["all_definitions"])
 
                 if ast_results["all_definitions"]:
-                    skeleton = self.lark_extractor.generate_skeleton(ast_results)
+                    skeleton = self.jaclang_extractor.generate_skeleton(ast_results)
                     skeleton_path = out_dir / f"{source_id}_jac_skeleton.md"
                     skeleton_path.write_text(skeleton, encoding='utf-8')
 
@@ -189,7 +187,6 @@ class Sanitizer:
     def _extract_skeletons_from_markdown(self, out_dir: Path, stats: dict):
         """Extract Jac skeletons from code blocks in markdown files."""
         all_definitions = []
-        extractor_used = "semantic"
 
         for file_info in stats["files"]:
             if file_info["type"] != "docs":
@@ -198,14 +195,7 @@ class Sanitizer:
             file_path = out_dir / file_info["path"]
             try:
                 content = file_path.read_text(encoding='utf-8')
-                
-                # Prefer Lark/AST if available, otherwise fallback to Regex
-                if self.lark_extractor.available:
-                    definitions = self.lark_extractor.extract_from_markdown(content)
-                    extractor_used = "lark"
-                else:
-                    definitions = self.semantic_extractor.extract_from_markdown(content)
-                    
+                definitions = self.jaclang_extractor.extract_from_markdown(content)
                 all_definitions.extend(definitions)
             except Exception:
                 continue
@@ -215,12 +205,8 @@ class Sanitizer:
                 "all_definitions": all_definitions,
                 "totals": {"files": len([f for f in stats["files"] if f["type"] == "docs"])}
             }
-            
-            if extractor_used == "lark":
-                skeleton = self.lark_extractor.generate_skeleton(results)
-            else:
-                skeleton = self.semantic_extractor.generate_skeleton(results)
-                
+
+            skeleton = self.jaclang_extractor.generate_skeleton(results)
             skeleton_path = out_dir / "docs_jac_skeleton.md"
             skeleton_path.write_text(skeleton, encoding='utf-8')
 

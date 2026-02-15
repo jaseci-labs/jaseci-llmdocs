@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Parse assembly_prompt.txt into rules.jsonl for RAG indexing.
+"""Parse rag_rules.txt into rules.jsonl for RAG indexing.
 
-Splits the monolithic prompt into individual rule nuggets with metadata
+Splits the rules file into individual rule nuggets with metadata
 for topic_ids, construct_types, priority, and category.
 """
 import json
@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-PROMPT_PATH = ROOT / "config" / "assembly_prompt.txt"
+PROMPT_PATH = ROOT / "config" / "rag_rules.txt"
 OUTPUT_PATH = ROOT / "config" / "rules.jsonl"
 
 CONSTRUCT_KEYWORDS = {
@@ -22,8 +22,11 @@ CONSTRUCT_KEYWORDS = {
     "traverse": ["-->", "<--", "->:", ":<-", "traversal"],
     "filter": ["filter", "(?:"],
     "spawn": ["spawn"],
-    "visit": ["visit"],
-    "report": ["report"],
+    "visit": ["visit", "disengage", "skip"],
+    "report": ["report", ".reports"],
+    "flow_wait": ["flow ", "wait ", "future"],
+    "entry_main": ["entry:__main__", "entry:"],
+    "include": ["include "],
     "by_llm": ["by llm", "llm", "sem "],
     "can": ["can ", "ability", "abilities"],
     "def": ["def ", "function", "lambda"],
@@ -82,7 +85,7 @@ def detect_topic_ids(text: str) -> list[str]:
         "access": [":priv", ":pub", ":protect"],
         "graph": ["++>", "+>:", "-->", "->:", "del-->", "connect", "traversal"],
         "abilities": ["can ", "with entry", "with exit"],
-        "walkers": ["spawn", "visit", "report", "disengage"],
+        "walkers": ["spawn", "visit", "report", "disengage", "skip", ".reports"],
         "by_llm": ["by llm", "sem "],
         "api": ["__specs__", "endpoint", "jac start"],
         "jsx_client": ["jsx", "cl{", ".cl.jac", "useEffect", "useState"],

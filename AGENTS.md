@@ -9,18 +9,17 @@ source ~/anaconda3/etc/profile.d/conda.sh && conda activate jac
 
 ### Validate existing output (no API key needed)
 ```bash
-python generate/run_pipeline.py --validate-only
+python run_pipeline.py --validate-only
 ```
 
 ### Run pipeline (requires OPENROUTER_API_KEY in .env)
 ```bash
-python generate/run_pipeline.py --skip-fetch   # reuse fetched docs
-python generate/run_pipeline.py                 # full run including fetch
+python run_pipeline.py                 # full run (fetch + extract + assemble + validate)
 ```
 
 ### JSON-only mode (suppress progress lines)
 ```bash
-python generate/run_pipeline.py --validate-only --json
+python run_pipeline.py --validate-only --json
 ```
 
 ## Output Format
@@ -51,7 +50,7 @@ Progress lines print to stdout during execution. A structured JSON summary is al
 
 ## Pipeline Stages
 
-1. **Fetch** - pulls source docs, sanitizes markdown (`--skip-fetch` to skip)
+1. **Fetch** - pulls source docs, sanitizes markdown
 2. **Extract** - deterministic signature/example extraction (no LLM)
 3. **Assemble** - single LLM call to produce final reference doc
 4. **Validate** - strict `jac check` on all code blocks + syntax verification
@@ -62,7 +61,7 @@ Progress lines print to stdout during execution. A structured JSON summary is al
 |------|---------|
 | `run_pipeline.py` | CLI entry point |
 | `config/config.yaml` | Pipeline config (model, source dirs) |
-| `config/assembly_prompt.txt` | LLM prompt template |
+| `config/rag_rules.txt` | LLM prompt template |
 | `src/pipeline/validator.py` | Code block validation via `jac check` |
 | `src/pipeline/docs_validator.py` | Canonical syntax pattern checks |
 | `release/jac-llmdocs.md` | Generated output |
@@ -78,11 +77,11 @@ recommendation == "PASS"? --> read release/jac-llmdocs.md, done
   |
   no
   v
-check validation.strict.errors --> fix assembly_prompt.txt or validator
+check validation.strict.errors --> fix rag_rules.txt or validator
   |
   v
-check validation.syntax.incorrect --> fix assembly_prompt.txt rules
+check validation.syntax.incorrect --> fix rag_rules.txt rules
   |
   v
-re-run pipeline (--skip-fetch) and validate again
+re-run pipeline and validate again
 ```

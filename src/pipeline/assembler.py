@@ -23,7 +23,7 @@ class Assembler:
         self.rag_retriever = rag_retriever
 
         root = Path(__file__).parents[2]
-        prompt_path = root / "config" / "assembly_prompt.txt"
+        prompt_path = root / "config" / "rag_rules.txt"
         with open(prompt_path) as f:
             self.prompt_template = f.read()
 
@@ -217,7 +217,7 @@ class LosslessPipeline:
         output_path.write_text(result)
 
         # Also save to release
-        release_dir = self.root.parent / "release"
+        release_dir = self.root / "release"
         release_dir.mkdir(exist_ok=True)
         (release_dir / "jac-llmdocs.md").write_text(result)
 

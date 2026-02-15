@@ -1,7 +1,6 @@
 from .deterministic_extractor import DeterministicExtractor, ExtractedContent
 from .assembler import Assembler
-from .lark_extractor import LarkExtractor
-from .semantic_extractor import SemanticExtractor
+from .jaclang_extractor import JaclangExtractor
 from .sanitizer import Sanitizer
 from .validator import Validator
 from .docs_validator import OfficialDocsValidator

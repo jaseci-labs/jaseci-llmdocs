@@ -236,25 +236,25 @@ async def update_config(data: dict):
 @app.get("/api/prompts")
 async def list_prompts():
     prompts = []
-    for f in CONFIG_DIR.glob("*_prompt.txt"):
-        prompts.append({
-            "name": f.stem,
-            "filename": f.name
-        })
+    for pattern in ("*_prompt.txt", "rag_rules.txt"):
+        for f in CONFIG_DIR.glob(pattern):
+            entry = {"name": f.stem, "filename": f.name}
+            if entry not in prompts:
+                prompts.append(entry)
     return prompts
 
 
 @app.get("/api/prompts/{filename}")
 async def get_prompt(filename: str):
     prompt_path = CONFIG_DIR / filename
-    if not prompt_path.exists() or not filename.endswith("_prompt.txt"):
+    if not prompt_path.exists() or not filename.endswith(".txt"):
         raise HTTPException(status_code=404, detail="Prompt file not found")
     return {"filename": filename, "content": prompt_path.read_text()}
 
 
 @app.put("/api/prompts/{filename}")
 async def update_prompt(filename: str, data: dict):
-    if not filename.endswith("_prompt.txt"):
+    if not filename.endswith(".txt"):
         raise HTTPException(status_code=400, detail="Invalid prompt filename")
     prompt_path = CONFIG_DIR / filename
     prompt_path.write_text(data["content"])
@@ -269,7 +269,7 @@ async def validate_output():
     """Validate the current output against jac check and official docs."""
     output_path = ROOT / "output" / "2_final" / "jac_reference.txt"
     if not output_path.exists():
-        release_path = ROOT.parent / "release" / "jac-llmdocs.md"
+        release_path = ROOT / "release" / "jac-llmdocs.md"
         if release_path.exists():
             output_path = release_path
         else:
@@ -334,7 +334,7 @@ async def get_docs_info():
 @app.get("/api/candidate")
 async def get_candidate():
     """Get the current jac-llmdocs.md content."""
-    release_path = ROOT.parent / "release" / "jac-llmdocs.md"
+    release_path = ROOT / "release" / "jac-llmdocs.md"
     if not release_path.exists():
         raise HTTPException(status_code=404, detail="No jac-llmdocs.md found")
     return {"content": release_path.read_text()}

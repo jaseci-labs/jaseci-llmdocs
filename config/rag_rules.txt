@@ -81,25 +81,36 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - .env: not auto-loaded; use glob _: bool = load_dotenv() or True;
 - Empty lambda: lambda e: any -> None { 0; } not {}
 - Docstrings before declarations, not inside bodies
+- report: appends to .reports array. Access: result = root spawn W(); data = result.reports[0]; Always check .reports before indexing. Prefer single report in with Root exit.
+- visit: QUEUES nodes for next traversal step (NOT immediate). Code after visit continues executing. visit [-->] else { fallback; } for dead ends. visit specific node: visit self.target; Indexed: visit : 0 : [-->];
+- disengage: immediately terminates walker traversal (walker's return). After disengage, exit abilities for ancestor nodes will NOT execute (v0.9.8+). Use when search found target.
+- skip: skips remaining code in current node's ability, moves to next queued node. Like continue for walker traversal.
+- with entry:__main__: only runs when file executed directly (Jac's if __name__ == "__main__"). with entry { } always runs when module loads.
+- include = C-style merge into current scope (inlines code). import = Python-style namespace separation. Use include for .jac modules in __init__.jac, import for Python/external modules.
+- flow/wait: flow launches function as background task (thread pool), returns future. wait retrieves result (blocks if needed). Use for CPU-bound parallel tasks. async/await = event loop, for I/O-bound.
+- Walker access: walker:priv W {} or walker :pub W {}. :pub = public endpoint. Without :pub = requires auth.
+- .cl.jac NO LONGER auto-annexed to matching .jac files (0.10.0). Must explicitly import client code. Re-export via cl{} block in main.jac.
+- Walker traversal is recursive DFS with deferred exits (v0.9.8+). Entries execute depth-first, exits in LIFO order (post-order). root->A->B: Enter root, Enter A, Enter B, Exit B, Exit A, Exit root.
+- JSX comprehensions: {[<li>{item}</li> for item in items]} compiles to .map(). Also: {[<li>{x}</li> for x in items if x.active]} compiles to .filter().map(). Prefer over manual .map(lambda ...)
 
 TOPICS (26 sections -- keep each CONCISE, 3-8 lines max per section):
 
 1. TYPES: primitives; collections; unions; has; return types; attribute ordering
 2. CONTROL: if/elif/else; for; while; match/case (colon!); try/except (not catch); no ternary; no pass
 3. FUNCTIONS: def; lambda (2 forms); pipe; f-strings; glob; top-level restriction
-4. IMPORTS: import; import from { }; include; __init__.jac; wrong forms
+4. IMPORTS: import (namespace); import from { }; include (inline merge); __init__.jac; wrong forms; with entry:__main__ guard
 5. ARCHETYPES: node; edge; walker; obj; enum; inheritance; impl; postinit; can vs def
 6. ACCESS: :pub :priv :protect
 7. GRAPH: connect (typed/untyped); disconnect; traversal (typed/untyped); filters; variable node traversal; walrus; visit indexed
 8. ABILITIES: can with entry/exit; self/here/visitor/root; Root type
-9. WALKERS: spawn; visit; report; disengage; skip
+9. WALKERS: spawn; visit (queued, not immediate); visit else {}; report (.reports array, prefer single report); disengage (stop traversal, exits skipped); skip (next node); DFS traversal order (entries depth-first, exits LIFO)
 10. BY_LLM: by llm; semstrings; sem annotations; enum classification; multi-model (Model)
 11. FILE_JSON: file.open; json.dumps/loads; keyword variable warning
 12. API: jac start; walker endpoints; __specs__; :pub auth; read-only root; custom auth
 13. WEBSOCKET: __specs__ methods=["websocket"]; async walker; ws:// endpoint; notify
 14. WEBHOOKS: __specs__ webhook; endpoint path
 15. SCHEDULER: __specs__ schedule; triggers
-16. ASYNC: async walker; async def; task status
+16. ASYNC: async walker; async def; async for; flow/wait (thread pool parallel); flow launches future, wait blocks for result; async/await for I/O, flow/wait for CPU
 17. PERMISSIONS: grant/revoke/check_access; levels
 18. PERSISTENCE: auto-persist; save; commit; references; delete
 19. TESTING: test name { assert }; identifier names
@@ -131,7 +142,7 @@ PATTERN 3: Multi-file fullstack CRUD with auth + AI
 - Include: jacLogin/jacIsLoggedIn, sem annotations with enum, by llm(), glob llm = Model(...)
 - Keep each "file" section compact
 
-COMMON ERRORS TABLE: ~30 rows, aligned WRONG -> RIGHT format. Include all critical errors.
+COMMON ERRORS TABLE: ~30 rows, aligned WRONG -> RIGHT format. Include all critical errors. Include: result.returns[0] -> result.reports[0]; entry {} -> with entry {}; .map(lambda) -> JSX comprehension
 
 ---
 
@@ -179,8 +190,12 @@ import from math { sqrt }
 # Walrus
 root +>: E() :+> (end := A(val=10));
 
-# Visit indexed
-visit : 0 : [-->];
+# Visit (queued, not immediate)
+visit [-->];                          # Queue outgoing nodes
+visit [->:Road:->];                   # Queue via typed edge
+visit [-->] else { print("leaf"); }   # Fallback for dead ends
+visit self.target;                    # Visit specific node
+visit : 0 : [-->];                    # Visit first only
 
 # Test
 test my_test { assert 1 + 1 == 2; }
@@ -192,10 +207,40 @@ obj MyObj { has x: int = 0; has y: int by postinit; def postinit { self.y = self
 glob counter: int = 0;
 def increment() -> int { counter += 1; return counter; }
 
+# report (.reports array)
+# result = root spawn W();
+# data = result.reports[0];             # Single report access
+# all_items = result.reports;            # All reported values
+# Safe: data = result.reports[0] if result.reports else None;
+# Best: accumulate internally, report once in with Root exit
+
+# disengage / skip
+# disengage;  -- immediately stops walker traversal. Exit abilities for ancestors will NOT run.
+# skip;       -- skips to next queued node (like continue for walkers)
+
+# Entry point variants
+# with entry { print("always runs"); }
+# with entry:__main__ { print("only when this file is main"); }
+
+# include vs import
+# include utils;                         # Merges utils.jac into current scope (C-style)
+# import math;                           # Namespace import (Python-style)
+# import from math { sqrt }              # Selective import
+
+# flow/wait (parallel concurrency)
+# future = flow expensive_fn();          # Launch as background task (thread pool)
+# other = do_something_else();           # Continue work
+# result = wait future;                  # Block for result when needed
+# async/await = event loop (I/O). flow/wait = thread pool (CPU).
+
+# JSX comprehensions (0.9.11+)
+# {[<li>{item}</li> for item in items]}                    # Compiles to .map()
+# {[<li>{x}</li> for x in items if x.active]}             # Compiles to .filter().map()
+
 # cl{} patterns
 # sv import from walkers { W } -- sv prefix required
 # useEffect(lambda -> None { myAsyncFunc(); }, []);
-# async def myAsyncFunc() -> None { result = root spawn W(); }
+# async def myAsyncFunc() -> None { result = root spawn W(); data = result.reports[0]; }
 # className not class; (expr) if cond else (expr) not ternary
 # .length not len(); String(x) not str(x); + not f-strings
 

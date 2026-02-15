@@ -88,9 +88,9 @@ def run_extract(config, quiet=False):
 
 
 def ensure_rules_jsonl(quiet=False):
-    """Generate rules.jsonl from assembly_prompt.txt if missing or stale."""
+    """Generate rules.jsonl from rag_rules.txt if missing or stale."""
     rules_path = ROOT / "config" / "rules.jsonl"
-    prompt_path = ROOT / "config" / "assembly_prompt.txt"
+    prompt_path = ROOT / "config" / "rag_rules.txt"
 
     if not prompt_path.exists():
         return rules_path
@@ -101,7 +101,7 @@ def ensure_rules_jsonl(quiet=False):
     )
 
     if needs_rebuild:
-        log("[RAG] Generating rules.jsonl from assembly_prompt.txt...", quiet)
+        log("[RAG] Generating rules.jsonl from rag_rules.txt...", quiet)
         sys.path.insert(0, str(ROOT / "scripts"))
         from split_rules import main as split_main
         split_main()
@@ -153,7 +153,7 @@ def fetch_jaclang_version():
 
 def check_version_and_archive(quiet=False):
     """Check jaclang version; archive old candidate if version changed."""
-    release_dir = ROOT.parent / "release"
+    release_dir = ROOT / "release"
     version_file = release_dir / "VERSION"
     current = version_file.read_text().strip() if version_file.exists() else ""
 
@@ -206,7 +206,7 @@ def run_assemble(config, extracted, extractor, quiet=False):
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "jac_reference.txt").write_text(result)
 
-    release_dir = ROOT.parent / "release"
+    release_dir = ROOT / "release"
     release_dir.mkdir(exist_ok=True)
     (release_dir / "jac-llmdocs.md").write_text(result)
 
@@ -283,7 +283,7 @@ def run_validate(text, quiet=False):
         "recommendation": recommendation,
     }
 
-    release_dir = ROOT.parent / "release"
+    release_dir = ROOT / "release"
     release_dir.mkdir(exist_ok=True)
     (release_dir / "jac-llmdocs.validation.json").write_text(json.dumps(validation_data, indent=2))
 
@@ -302,7 +302,7 @@ def main():
 
     try:
         if args.validate_only:
-            candidate = ROOT.parent / "release" / "jac-llmdocs.md"
+            candidate = ROOT / "release" / "jac-llmdocs.md"
             if not candidate.exists():
                 log("[ERROR] release/jac-llmdocs.md not found", quiet)
                 summary["error"] = "release/jac-llmdocs.md not found"

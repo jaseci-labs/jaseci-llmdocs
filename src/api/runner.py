@@ -396,7 +396,7 @@ class PipelineRunner:
             output_path.write_text(result)
 
             # Also save to release
-            release_dir = self.root.parent / "release"
+            release_dir = self.root / "release"
             release_dir.mkdir(exist_ok=True)
             (release_dir / "jac-llmdocs.md").write_text(result)
 

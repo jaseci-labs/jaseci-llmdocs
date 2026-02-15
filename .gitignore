@@ -8,9 +8,13 @@ __pycache__/
 dist/
 build/
 
+# Jac
+.jac/
+
 # Environment
 .env
 .env.local
+venv/
 
 # IDE
 .vscode/
@@ -36,14 +40,22 @@ pnpm-debug.log*
 # Node
 node_modules/
 
-# Generate pipeline
+# Pipeline ephemeral dirs
+docs/
+output/
+fetched/
+data/
+config/sources.db
+config/sources.json
+
+# Legacy paths (pre-flatten)
 generate/docs/
 generate/output/
 generate/fetched/
 generate/venv/
 generate/config/sources.db
 generate/config/sources.json
-generate/data/chromadb/
+generate/data/
 
 # Tests
 tests/debug-*.txt
