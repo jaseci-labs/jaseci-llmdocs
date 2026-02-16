@@ -44,18 +44,20 @@ class EmbeddingProvider:
 
 
 class RuleStore:
-    """Manages the jac_rules ChromaDB collection (persistent across runs)."""
+    """Manages the jac_rules ChromaDB collection (re-indexed each run)."""
 
     def __init__(self, client, embedding_provider: EmbeddingProvider, collection_name: str = "jac_rules"):
         self._client = client
         self._embedder = embedding_provider
+        self._collection_name = collection_name
+        try:
+            client.delete_collection(collection_name)
+        except Exception:
+            pass
         self._collection = client.get_or_create_collection(
             name=collection_name,
             metadata={"hnsw:space": "cosine"},
         )
-
-    def is_indexed(self) -> bool:
-        return self._collection.count() > 0
 
     def index_rules(self, rules: list[RuleNugget]) -> int:
         if not rules:
@@ -351,13 +353,8 @@ class RAGRetriever:
         self._example_store = ExampleStore(client, self._embedder)
 
     def ensure_rules_indexed(self, rules_path: Path) -> int:
-        """Load and index rules from rules.jsonl if not already indexed."""
+        """Load and index rules from rules.jsonl."""
         self._init_stores()
-
-        if self._rule_store.is_indexed():
-            count = self._rule_store._collection.count()
-            logger.info("Rules already indexed (%d entries)", count)
-            return count
 
         if not rules_path.exists():
             logger.warning("Rules file not found: %s", rules_path)

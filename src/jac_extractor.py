@@ -12,8 +12,12 @@ from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
 
-from jaclang.pycore.compiler import JacCompiler
-from jaclang.pycore.program import JacProgram
+try:
+    from jaclang.jac0core.compiler import JacCompiler
+    from jaclang.jac0core.program import JacProgram
+except ImportError:
+    from jaclang.pycore.compiler import JacCompiler
+    from jaclang.pycore.program import JacProgram
 
 
 class DefinitionKind(Enum):

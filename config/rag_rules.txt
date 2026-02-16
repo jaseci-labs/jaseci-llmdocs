@@ -29,12 +29,14 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - Model: import from byllm.lib { Model }; glob llm = Model(model_name="gpt-4o-mini");
 - Access: has:priv x OR has :priv x (both valid); only :pub :priv :protect
 - Permissions: node.__jac__.grant(root, WritePerm); Levels: NoPerm ReadPerm ConnectPerm WritePerm
-- Specs: obj __specs__ { static has methods: list = [...]; } __specs__ controls methods/path/path_prefix/websocket/schedule/webhook ONLY, NOT auth.
-- path_prefix: static has path_prefix: str = "/api"; in __specs__
+- Specs: obj __specs__ { } compiles but is VESTIGIAL in 0.10.2 -- methods, path, path_prefix are IGNORED by the server. All walkers register at POST /walker/<WalkerName> regardless of __specs__ settings. GET /walker/<Name> returns metadata only (does not execute).
 - Walker auth: :pub on walker declaration = public (no auth). Without :pub = requires auth token. WRONG: static has auth: bool = False; in __specs__.
 - Auth endpoints: POST /user/register and POST /user/login for built-in auth tokens
 - :pub walker root access: READ-ONLY. Graph writes silently fail when here is root. Use built-in auth for write access.
 - Custom auth (OAuth/JWT): make ALL walkers :pub, handle auth manually inside walker body.
+- Walkers CANNOT access HTTP request headers/cookies. ExecutionContext.get() does NOT exist. Pass auth tokens as walker `has` parameters in POST body: `walker :pub Verify { has token: str; }`
+- SSO: /sso/{platform}/{operation} routes available ONLY with jac-scale plugin (not base jaclang runtime)
+- OpenAPI: /openapi.json and /docs available ONLY with jac-scale plugin (FastAPI-based)
 - Methods: can for abilities (with entry/exit), def for regular methods
 - Root type: Root (capital R) in event clauses. Backtick `root REMOVED. Union: can act with Root | MyNode entry { }
 - Filters: [-->](?:Type); [-->](?:Type, attr==val). Old (`?Type) REMOVED. Comma separator.
@@ -50,7 +52,7 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - No pass keyword: use {} or comment
 - Enumerate: for (i, x) in enumerate(items) { }; parens required
 - C-style for: for i=0 to i<10 by i+=1 { stmt; }
-- Match/case: case V: stmt; (COLON not braces). Wrong: case 1 { }
+- Match/case: case V: stmt; (COLON then statement, NO braces per case). WRONG: case 1 { stmt; } WRONG: case "hi": { stmt; }. RIGHT: case "hi": stmt; RIGHT: case "hi": if cond { stmt; }
 - Typed edge CONNECT: a +>: E() :+> b; Wrong: a ++> E() ++> b (++> only untyped)
 - Typed edge TRAVERSE: [->:E:->] Wrong: [-->:E:] (--> only untyped)
 - Chained: [->:E1:->->:E2:->] Wrong: [-->:E1:->-->:E2:->]
@@ -70,23 +72,30 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - List concat in cl{}: use items.append(x) not items = items + [x] (cl{} only)
 - Reserved keywords: obj node walker edge enum can has -- NEVER use as variable names. WRONG: obj = json.loads(s); RIGHT: data = json.loads(s);
 - Attribute ordering: non-default BEFORE default. Wrong: has x: int = 0; has y: str;
-- Test names: identifiers not strings. Wrong: test "name" { }
-- Fullstack entry: cl{} def:pub app must match [serve] base_route_app in jac.toml
-- .cl.jac auto client-side (no cl{} wrapper). Do NOT include via include.
+- Test blocks: `test { assert True; }` (0.10.2: names REMOVED, just test { }). WRONG: `test my_test { }` WRONG: `test "name" { }`
+- Client code: TWO approaches. (1) .cl.jac files = entire file is client-side. (2) cl{} blocks inside .jac files = mixed server+client in one file. Both work.
+- .cl.jac: auto client-side (no cl{} wrapper needed). Do NOT include via include.
+- cl{} block: cl { def:pub app() -> JsxElement { ... } } inside main.jac for mixed files
+- Fullstack entry: def:pub app must match [serve] base_route_app in jac.toml
 - Dev ports: --port Vite frontend (8000); --api_port backend (8001, auto-proxied)
 - No ternary ?: -- use (expr) if cond else (expr)
-- cl{} JS builtins: .length not len(); String(x) not str(x); parseInt(x) not int(x); Math.min/max; .trim() not .strip(); no range(); no f-strings (use +); no tuple unpacking; no new keyword; className not class
+- cl{} JS builtins: .length not len(); String(x) not str(x); parseInt(x) not int(x); Math.min/max; .trim() not .strip(); no range(); no f-strings (use +); no tuple unpacking; className not class
+- `new` keyword does NOT exist in Jac. WRONG: new Date(). RIGHT: Reflect.construct(Date, [val])
+- None compiles to null in cl{} context. Use None in Jac source.
+- cl import / sv import prefixes at TOP LEVEL (outside cl{} block) for cross-context imports
 - sv import prefix for server imports in .cl.jac
 - Lifecycle: useEffect(lambda -> None { func(); }, []) not can with entry
 - root spawn compiles to await; function MUST be async def
-- root spawn sends POST; walker __specs__ MUST include "POST"
-- CSS: import "./styles.css";
+- root spawn in cl{} sends POST to /walker/<WalkerName> (all walkers are POST in 0.10.2)
+- CSS: import "./styles.css"; or import '.styles.css'; (dot-prefix auto-converts to ./styles.css)
+- Component def return type: -> JsxElement (not -> any which conflicts with builtin any())
 - .jac/ auto-generated, never modify manually
 - npm deps: ALL in jac.toml; NEVER npm install in .jac/client/
 - Tailwind v4: tailwindcss + @tailwindcss/postcss in [dependencies.npm]
 - .env: not auto-loaded; use glob _: bool = load_dotenv() or True;
 - Docstrings go BEFORE declarations, not inside bodies. Never name abilities list/dict/str/int or other builtins.
 - report: appends to .reports array. Access: result = root spawn W(); data = result.reports[0]; Always check .reports before indexing. Prefer single report in with Root exit.
+- Walker HTTP response format: {"ok":true, "type":"response", "data":{"result":..., "reports":[...]}, "error":null, "meta":{...}}. Client fetch: response.data.reports[0] for reported values.
 - visit: QUEUES nodes for next traversal step (NOT immediate). Code after visit continues executing. visit [-->] else { fallback; } for dead ends. visit specific node: visit self.target; Indexed: visit : 0 : [-->];
 - disengage: immediately terminates walker traversal (walker's return). After disengage, exit abilities for ancestor nodes will NOT execute (v0.9.8+). Use when search found target.
 - skip: skips remaining code in current node's ability, moves to next queued node. Like continue for walker traversal.
@@ -115,16 +124,16 @@ TOPICS (26 sections -- keep each CONCISE, 3-8 lines max per section):
 9. WALKERS: spawn (both forms); visit (queued, not immediate); visit else {}; report (.reports array); disengage (exits skipped); skip; DFS traversal order
 10. BY_LLM: by llm; semstrings (has desc: str = "" """hint""";); sem annotations (put OUTSIDE fenced code blocks or comment them); enum classification; Model import; inline by llm
 11. FILE_JSON: file.open; json.dumps/loads; keyword variable warning (obj is keyword)
-12. API: jac start; walker endpoints; __specs__ (methods/path/path_prefix); :pub auth; auth endpoints (/user/register, /user/login); read-only root; custom auth (OAuth/JWT pattern)
+12. API: jac start; ALL walkers at POST /walker/<Name> (GET=metadata only); __specs__ is vestigial (ignored in 0.10.2); :pub auth; auth endpoints (/user/register, /user/login); read-only root; custom auth (OAuth/JWT); response format {"data":{"result":...,"reports":[...]}}; SSO+OpenAPI require jac-scale plugin
 13. WEBSOCKET: __specs__ methods=["websocket"]; async walker; ws:// endpoint; notify_users/notify_channels; broadcast
 14. WEBHOOKS: __specs__ webhook dict; endpoint path
 15. SCHEDULER: __specs__ schedule dict; private; triggers (cron/interval/date)
 16. ASYNC: async walker; async def; flow/wait (thread pool for CPU-bound); async/await (event loop for I/O-bound); task status
 17. PERMISSIONS: grant/revoke/check_access; NoPerm ReadPerm ConnectPerm WritePerm
 18. PERSISTENCE: auto-persist; save; commit; &id references; delete
-19. TESTING: test name { assert }; identifier names
+19. TESTING: test { assert }; no test names in 0.10.2
 20. STDLIB: builtins; string/list/dict methods
-21. JSX/CLIENT: .cl.jac; sv import; useEffect; async def + root spawn; JS builtins; className; CSS; component def:pub; has = reactive state; JSX comprehensions; conditional rendering; form handling; component imports; .cl.jac auto-compiled, never include
+21. JSX/CLIENT: TWO approaches (.cl.jac files OR cl{} blocks in .jac); cl import/sv import at top level; useEffect; async def + root spawn; JS builtins; className; CSS; component def:pub -> JsxElement; has = reactive state; JSX comprehensions; no new keyword (use Reflect.construct); None=null in cl; .cl.jac auto-compiled never include
 22. CLIENT_AUTH: jacSignup/jacLogin/jacLogout/jacIsLoggedIn from @jac/runtime; per-user isolation
 23. JAC.TOML: all sections ([project] [dependencies] [dependencies.npm] [serve] [plugins.client] [build] [scripts]); tailwind config; npm deps
 24. FULLSTACK_SETUP: jac create --use client; jac install; jac add --npm; .jac/ auto-gen; project structure; __init__.jac dotted paths
@@ -133,10 +142,12 @@ TOPICS (26 sections -- keep each CONCISE, 3-8 lines max per section):
 
 PATTERNS (include 3 complete examples, each COMPACT -- under 80 lines):
 
-PATTERN 1: Fullstack single-file (main.jac with sv{}/cl{})
-- Counter app: node, typed edge, 2 walkers (GetCount, Increment) with __specs__ and :pub
-- sv{} block: import from __main__ { GetCount, Increment, Counter }
-- cl{} block: import from react { useEffect }; sv import from __main__ { GetCount, Increment }; def:pub app with useEffect, async def, JS builtins
+PATTERN 1: Fullstack single-file (main.jac with cl{} block)
+- Counter app: node, 2 walkers (GetCount, Increment) with :pub
+- NO __specs__ needed (vestigial in 0.10.2). All walkers auto-register at POST /walker/<Name>.
+- cl{} block: cl import from react { useEffect } at top level; cl { def:pub app() -> JsxElement { ... } }
+- sv import from __main__ { GetCount, Increment } inside cl{} or at top level with sv prefix
+- Client fetch pattern: fetch("/walker/GetCount", {method:"POST"}).then(r => r.json()).then(d => d.data.reports[0])
 - Show jac.toml. This is the actual fullstack wiring pattern.
 - with entry { } for initial graph setup
 
@@ -147,11 +158,12 @@ PATTERN 2: Walker graph traversal
 - with entry block: creates cities, typed connects, traversal from variable node, edge attr filter, spawn both walkers
 - Show [node_var ->:Road:->] and [node_var ->:Road:toll == True:->]
 
-PATTERN 3: API endpoints with __specs__
-- Todo CRUD: ListTodos (GET+POST with path_prefix), AddTodo, FilterTodos (match/case for priority filter)
-- Show __specs__ with methods, path_prefix
+PATTERN 3: API endpoints (walker-per-action)
+- Todo CRUD: ListTodos, AddTodo, FilterTodos (match/case for priority filter)
+- All walkers auto-register at POST /walker/<Name> (no __specs__ needed in 0.10.2)
 - Show :pub auth, realistic walker structure
-- Keep compact, no client code in this pattern
+- Show client fetch pattern with response.data.reports[0]
+- Keep compact
 
 COMMON ERRORS: ~30 lines, plain text WRONG -> RIGHT format. Include ALL of these:
 - true/false -> True/False
@@ -166,7 +178,8 @@ COMMON ERRORS: ~30 lines, plain text WRONG -> RIGHT format. Include ALL of these
 - (`?Type) -> (?:Type)
 - (`?Type:attr>v) -> (?:Type, attr > v)
 - can act with `root entry -> can act with Root entry
-- test "name" { } -> test name { }
+- test "name" { } -> test { } (no names in 0.10.2)
+- test my_test { } -> test { } (named tests removed in 0.10.2)
 - obj = json.loads(s); -> data = json.loads(s);
 - str? -> str | None
 - jac serve file.jac -> jac start file.jac
@@ -181,7 +194,8 @@ COMMON ERRORS: ~30 lines, plain text WRONG -> RIGHT format. Include ALL of these
 - include nodes; in __init__.jac -> include mypackage.nodes;
 - npm install in .jac/client/ -> jac add --npm pkgname
 - print("x"); at top level -> with entry { print("x"); }
-- case 1 { stmt; } -> case 1: stmt;
+- case 1 { stmt; } -> case 1: stmt; (NO braces after case, even for blocks)
+- case "hi": { stmt; } -> case "hi": if True { stmt; } (use if/for/while for multi-stmt, NOT bare braces)
 - catch Error as e { } -> except Error as e { }
 - result = x > 0 ? "y" : "n"; -> result = ("y") if x > 0 else ("n");
 - has x: int = 0; has y: str; -> has y: str; has x: int = 0;
@@ -191,6 +205,11 @@ COMMON ERRORS: ~30 lines, plain text WRONG -> RIGHT format. Include ALL of these
 - pass -> {} or comment
 - !x (JS-style NOT) -> not x (Python-style NOT)
 - sem annotations and semstrings are COMMENTS for LLM guidance -- put them outside fenced code blocks or prepend with # inside code
+- __specs__ methods/path/path_prefix -> IGNORED in 0.10.2; all walkers are POST /walker/<Name>
+- new Date() in cl{} -> Reflect.construct(Date, [val])
+- def:pub app() -> any -> def:pub app() -> JsxElement (-> any conflicts with builtin)
+- fetch("/api/todos") -> fetch("/walker/ListTodos", {method:"POST"}) (fixed endpoint format)
+- ExecutionContext.get() for headers -> pass token as walker has param in POST body (no header access)
 
 ---
 
@@ -247,8 +266,8 @@ visit [-->] else { print("leaf"); }   # Fallback for dead ends
 visit self.target;                    # Visit specific node
 visit : 0 : [-->];                    # Visit first only
 
-# Test
-test my_test { assert 1 + 1 == 2; }
+# Test (0.10.2: no names allowed)
+test { assert 1 + 1 == 2; }
 
 # Postinit
 obj MyObj { has x: int = 0; has y: int by postinit; def postinit { self.y = self.x * 2; } }
@@ -301,10 +320,11 @@ def increment() -> int { counter += 1; return counter; }
 # glob llm = Model(model_name="gpt-4o-mini");
 
 # Websocket
-# async walker :pub Echo { obj __specs__ { static has methods: list = ["websocket"]; } async can echo with Root entry { report here; } }
+# async walker :pub Echo { async can echo with Root entry { report here; } }
+# Connect: ws://host/walker/Echo
 # socket.notify_users(ids, msg); socket.notify_channels(names, msg);
 
-# Webhook
+# Webhook (note: __specs__ webhook/schedule may still be functional unlike methods/path)
 # obj __specs__ { static has webhook: dict = {"type": "header", "name": "X-Sig"}; }
 
 # Scheduler
@@ -348,8 +368,23 @@ def increment() -> int { counter += 1; return counter; }
 # Async task status
 # task.__jac__.status; task.__jac__.reports; task.__jac__.error;
 
-# path_prefix
-# obj __specs__ { static has methods: list = ["GET"]; static has path_prefix: str = "/api"; }
+# Walker endpoints (0.10.2)
+# ALL walkers: POST /walker/<WalkerName> (execute), GET /walker/<WalkerName> (metadata only)
+# __specs__ methods/path/path_prefix are IGNORED by server -- vestigial
+# Response: {"ok":true, "data":{"result":..., "reports":[...]}, "error":null}
+# Client fetch: fetch("/walker/MyWalker", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)})
+
+# new keyword workaround in cl{}
+# Reflect.construct(Date, [val])  # instead of new Date(val)
+# Reflect.construct(URLSearchParams, [params])  # instead of new URLSearchParams()
+
+# Component return type
+# cl { def:pub app() -> JsxElement { return <div>...</div>; } }  # -> JsxElement not -> any
+
+# cl import / sv import at top level
+# cl import from react { useState, useEffect }   # outside cl{} block
+# sv import from __main__ { MyWalker }            # outside cl{} block
+# cl { def:pub app() -> JsxElement { ... } }      # cl{} block with component
 
 ---
 
