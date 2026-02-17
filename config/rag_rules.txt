@@ -34,7 +34,11 @@ HIGH-FAILURE SYNTAX (must be exact -- verified with jac check):
 - Auth endpoints: POST /user/register and POST /user/login for built-in auth tokens
 - :pub walker root access: READ-ONLY. Graph writes silently fail when here is root. Use built-in auth for write access.
 - Custom auth (OAuth/JWT): make ALL walkers :pub, handle auth manually inside walker body.
-- Walkers CANNOT access HTTP request headers/cookies. ExecutionContext.get() does NOT exist. Pass auth tokens as walker `has` parameters in POST body: `walker :pub Verify { has token: str; }`
+- Walkers CANNOT access HTTP request headers, query params, cookies, or request object. ExecutionContext.get() does NOT exist. ALL data must be passed as walker `has` fields in POST body: `walker :pub Verify { has token: str; }`
+- Walker `has` fields become POST body parameters. Non-default `has` fields are REQUIRED constructor args. `has x: list;` without default = required in POST body. Use `has x: list = [];` if optional.
+- Union types `T | None = None` in walker has fields: works in base runtime (plain **kwargs). In jac-scale (FastAPI/pydantic), may cause 422 Unprocessable -- use concrete defaults ("", [], -1) instead.
+- OAuth GET redirects (GitHub, Google) cannot hit walker endpoints directly (walkers are POST-only). Redirect must go to frontend route that then POSTs to walker.
+- Jac compiler does NOT catch missing method parameters at compile time -- fails at runtime with "got multiple values for argument" or argument count errors.
 - SSO: /sso/{platform}/{operation} routes available ONLY with jac-scale plugin (not base jaclang runtime)
 - OpenAPI: /openapi.json and /docs available ONLY with jac-scale plugin (FastAPI-based)
 - Methods: can for abilities (with entry/exit), def for regular methods
@@ -124,7 +128,7 @@ TOPICS (26 sections -- keep each CONCISE, 3-8 lines max per section):
 9. WALKERS: spawn (both forms); visit (queued, not immediate); visit else {}; report (.reports array); disengage (exits skipped); skip; DFS traversal order
 10. BY_LLM: by llm; semstrings (has desc: str = "" """hint""";); sem annotations (put OUTSIDE fenced code blocks or comment them); enum classification; Model import; inline by llm
 11. FILE_JSON: file.open; json.dumps/loads; keyword variable warning (obj is keyword)
-12. API: jac start; ALL walkers at POST /walker/<Name> (GET=metadata only); __specs__ is vestigial (ignored in 0.10.2); :pub auth; auth endpoints (/user/register, /user/login); read-only root; custom auth (OAuth/JWT); response format {"data":{"result":...,"reports":[...]}}; SSO+OpenAPI require jac-scale plugin
+12. API: jac start; ALL walkers at POST /walker/<Name> (GET=metadata only); __specs__ vestigial (ignored); :pub auth; auth endpoints; read-only root; custom auth via has fields (no header access); response format {"data":{"result":...,"reports":[...]}}; non-default has = required POST param; OAuth GET redirect -> frontend -> POST to walker; SSO+OpenAPI = jac-scale only
 13. WEBSOCKET: __specs__ methods=["websocket"]; async walker; ws:// endpoint; notify_users/notify_channels; broadcast
 14. WEBHOOKS: __specs__ webhook dict; endpoint path
 15. SCHEDULER: __specs__ schedule dict; private; triggers (cron/interval/date)
@@ -210,6 +214,9 @@ COMMON ERRORS: ~30 lines, plain text WRONG -> RIGHT format. Include ALL of these
 - def:pub app() -> any -> def:pub app() -> JsxElement (-> any conflicts with builtin)
 - fetch("/api/todos") -> fetch("/walker/ListTodos", {method:"POST"}) (fixed endpoint format)
 - ExecutionContext.get() for headers -> pass token as walker has param in POST body (no header access)
+- has x: list; (no default) -> has x: list = []; (non-default = required POST param, fails if missing)
+- GET /walker/Name to execute -> POST /walker/Name (GET returns metadata only, does not execute)
+- OAuth redirect to /walker/Callback -> redirect to frontend route, then POST to walker
 
 ---
 
@@ -385,6 +392,16 @@ def increment() -> int { counter += 1; return counter; }
 # cl import from react { useState, useEffect }   # outside cl{} block
 # sv import from __main__ { MyWalker }            # outside cl{} block
 # cl { def:pub app() -> JsxElement { ... } }      # cl{} block with component
+
+# Walker has fields = POST body params
+# walker :pub W { has token: str; has data: list = []; }
+# POST /walker/W body: {"token": "abc123", "data": [1,2,3]}
+# Non-default `has` fields are REQUIRED in POST body. Use defaults for optional.
+# No access to HTTP headers, query params, cookies, or request object.
+
+# OAuth workaround (walkers are POST-only, can't receive GET redirects)
+# Frontend route receives OAuth redirect, extracts code from URL, POSTs to walker:
+# walker :pub OAuthCallback { has code: str; has state: str = ""; }
 
 ---
 
