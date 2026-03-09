@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 # Load .env
 docgen_dir = Path(__file__).parents[1]
-if (docgen_dir / ".env").exists(): load_dotenv(docgen_dir / ".env")
+if (docgen_dir / ".env").exists(): load_dotenv(docgen_dir / ".env", override=False)
 
 class LLM:
     APP_URL = "https://jaseci.org"

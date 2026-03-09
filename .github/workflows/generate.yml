@@ -21,6 +21,16 @@ jobs:
       contents: write
 
     steps:
+      - name: Check API key
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::error::OPENROUTER_API_KEY secret is not set. Add it in Settings > Secrets > Actions."
+            exit 1
+          fi
+          echo "OPENROUTER_API_KEY is set (${#OPENROUTER_API_KEY} chars)"
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
