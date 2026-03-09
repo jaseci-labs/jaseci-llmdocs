@@ -17,6 +17,7 @@ from ..llm import LLM
 from ..sanitizer import Sanitizer
 from ..markdown_extractor import MarkdownExtractor
 from ..assembler import Assembler
+from ..rag import RAGRetriever
 from ..code_validator import Validator, JacCheckResult, ValidationError
 from ..syntax_validator import SyntaxValidator
 
@@ -382,7 +383,22 @@ class PipelineRunner:
                         )
 
             llm = LLM(self.cfg, self.cfg.get('assembly', {}))
-            assembler = Assembler(llm, self.cfg, on_progress=progress_cb, on_token=on_token)
+
+            retriever = RAGRetriever(self.cfg)
+            if not retriever.available:
+                raise RuntimeError(
+                    "RAG dependencies not installed (sentence-transformers, chromadb, numpy)"
+                )
+
+            rules_path = self.root / "config" / "rules.jsonl"
+            if rules_path.exists():
+                retriever.ensure_rules_indexed(rules_path)
+            retriever.index_extracted_examples(self._extracted_content)
+
+            assembler = Assembler(
+                llm, self.cfg, on_progress=progress_cb, on_token=on_token,
+                rag_retriever=retriever,
+            )
 
             result = await asyncio.to_thread(
                 assembler.assemble, self._extracted_content, self._extractor

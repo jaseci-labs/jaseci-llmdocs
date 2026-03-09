@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 from .llm import LLM
 from .markdown_extractor import MarkdownExtractor, ExtractedContent
+from .code_validator import Validator
 
 
 class Assembler:
@@ -29,9 +30,11 @@ class Assembler:
 
     def assemble(self, extracted: ExtractedContent, extractor: MarkdownExtractor) -> str:
         """Assemble final document from extracted content in single LLM call."""
-        if self.rag_retriever is not None:
-            return self._assemble_with_rag(extracted, extractor)
-        return self._assemble_monolithic(extracted, extractor)
+        if self.rag_retriever is None:
+            raise ValueError(
+                "RAG retriever is required. Pipeline cannot run in monolithic mode."
+            )
+        return self._assemble_with_rag(extracted, extractor)
 
     def _assemble_monolithic(self, extracted: ExtractedContent, extractor: MarkdownExtractor) -> str:
         """Original monolithic assembly path (unchanged)."""

@@ -100,12 +100,15 @@ class LLM:
                             break
                         try:
                             chunk = json.loads(data_str)
-                            content = chunk.get('choices', [{}])[0].get('delta', {}).get('content', '')
+                            choices = chunk.get('choices', [])
+                            if not choices:
+                                continue
+                            content = choices[0].get('delta', {}).get('content', '')
                             if content:
                                 accumulated.append(content)
                                 if on_token:
                                     on_token(content)
-                        except json.JSONDecodeError:
+                        except (json.JSONDecodeError, IndexError, KeyError):
                             continue
                     return ''.join(accumulated)
             except Exception as e:

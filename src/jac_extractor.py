@@ -275,7 +275,7 @@ class JacExtractor:
         except Exception:
             return []
 
-        if module.has_syntax_errors:
+        if prog.errors_had:
             return []
 
         definitions = []

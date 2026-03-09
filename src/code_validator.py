@@ -112,11 +112,8 @@ class Validator:
         except Exception as exc:
             return False, str(exc)
 
-        if module.has_syntax_errors:
-            errors = prog.errors_had
-            if errors:
-                return False, str(errors[0])
-            return False, "syntax error"
+        if prog.errors_had:
+            return False, str(prog.errors_had[0])
         return True, None
 
     def find_patterns(self, text):

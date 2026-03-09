@@ -9,6 +9,7 @@ Usage:
 """
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -110,32 +111,28 @@ def ensure_rules_jsonl(quiet=False):
 
 
 def init_rag(config, extracted, quiet=False):
-    """Initialize RAG retriever with graceful fallback."""
+    """Initialize RAG retriever. Raises on failure -- no monolithic fallback."""
     rag_config = config.get("rag", {})
     if not rag_config.get("enabled", True):
-        log("[RAG] Disabled in config", quiet)
-        return None
+        raise RuntimeError("RAG is disabled in config but is required for pipeline execution")
 
-    try:
-        from src.rag import RAGRetriever
+    from src.rag import RAGRetriever
 
-        retriever = RAGRetriever(config)
-        if not retriever.available:
-            log("[RAG] Dependencies not installed, falling back to monolithic", quiet)
-            return None
+    retriever = RAGRetriever(config)
+    if not retriever.available:
+        raise RuntimeError(
+            "RAG dependencies not installed (sentence-transformers, chromadb, numpy). "
+            "Install with: pip install sentence-transformers chromadb numpy"
+        )
 
-        rules_path = ensure_rules_jsonl(quiet)
-        rules_count = retriever.ensure_rules_indexed(rules_path)
-        log(f"[RAG] Rules indexed: {rules_count}", quiet)
+    rules_path = ensure_rules_jsonl(quiet)
+    rules_count = retriever.ensure_rules_indexed(rules_path)
+    log(f"[RAG] Rules indexed: {rules_count}", quiet)
 
-        examples_count = retriever.index_extracted_examples(extracted)
-        log(f"[RAG] Examples indexed: {examples_count}", quiet)
+    examples_count = retriever.index_extracted_examples(extracted)
+    log(f"[RAG] Examples indexed: {examples_count}", quiet)
 
-        return retriever
-
-    except Exception as exc:
-        log(f"[RAG] Initialization failed: {exc}, falling back to monolithic", quiet)
-        return None
+    return retriever
 
 
 def fetch_jaclang_version():
@@ -201,6 +198,17 @@ def run_assemble(config, extracted, extractor, quiet=False):
 
     if token_count[0] >= 100 and not quiet:
         print(flush=True)
+
+    # Stamp the correct version into the header deterministically
+    version_file = ROOT / "release" / "VERSION"
+    if version_file.exists():
+        ver = version_file.read_text().strip()
+        result = re.sub(
+            r"^(# Jac Language Reference\s*)\(v[\d.]+\)",
+            rf"\1(v{ver})",
+            result,
+            count=1,
+        )
 
     output_dir = ROOT / "output" / "2_final"
     output_dir.mkdir(parents=True, exist_ok=True)
