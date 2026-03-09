@@ -17,6 +17,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: llmdocs
     permissions:
       contents: write
 
@@ -26,7 +27,7 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           if [ -z "$OPENROUTER_API_KEY" ]; then
-            echo "::error::OPENROUTER_API_KEY secret is not set. Add it in Settings > Secrets > Actions."
+            echo "::error::OPENROUTER_API_KEY secret is not set"
             exit 1
           fi
           echo "OPENROUTER_API_KEY is set (${#OPENROUTER_API_KEY} chars)"
