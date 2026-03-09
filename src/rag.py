@@ -34,6 +34,9 @@ class EmbeddingProvider:
     def _load(self):
         if self._model is not None:
             return
+        import os
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
         from sentence_transformers import SentenceTransformer
         self._model = SentenceTransformer(self._model_name)
 
